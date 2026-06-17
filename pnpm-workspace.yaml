@@ -1,0 +1,9 @@
+verifyDepsBeforeRun: false
+onlyBuiltDependencies:
+  - esbuild
+  - lightningcss
+  - unrs-resolver
+  - msgpackr-extract
+overrides:
+  # bullmq pins ioredis exactly; dedupe so its Redis instance type matches.
+  ioredis: 5.10.1
