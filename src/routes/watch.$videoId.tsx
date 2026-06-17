@@ -44,6 +44,7 @@ function Watch() {
               vodId={data.id}
               initialPosition={data.position ?? 0}
               duration={data.durationSeconds ?? 0}
+              streamStartedAt={data.createdAtTwitch}
               onTime={setCurrentTime}
             />
           </div>

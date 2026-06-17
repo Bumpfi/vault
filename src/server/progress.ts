@@ -17,6 +17,7 @@ export const getWatchData = createServerFn({ method: 'GET' })
         twitchVideoId: vod.twitchVideoId,
         title: vod.title,
         durationSeconds: vod.durationSeconds,
+        createdAtTwitch: vod.createdAtTwitch,
         watched: watchProgress.watched,
         position: watchProgress.positionSeconds,
       })

@@ -1,11 +1,12 @@
 import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { X } from 'lucide-react'
 import { fetchSession } from '#/lib/session'
 import { getWatchData } from '#/server/progress'
 import { listVods } from '#/server/vods'
-import { TwitchPlayer } from '#/components/twitch-player'
+import { TwitchPlayer, type TwitchPlayerHandle } from '#/components/twitch-player'
 import { thumbnail, timeAgo } from '#/lib/format'
 
 export const Route = createFileRoute('/split')({
@@ -27,12 +28,29 @@ export const Route = createFileRoute('/split')({
 
 function Split() {
   const { a, b } = Route.useSearch()
+  const leftRef = useRef<TwitchPlayerHandle>(null)
+  const rightRef = useRef<TwitchPlayerHandle>(null)
+
+  // Align the right stream to the left stream's real-world time.
+  const syncToLeft = () => {
+    const l = leftRef.current
+    const r = rightRef.current
+    if (!l || !r || l.streamStartMs == null || r.streamStartMs == null) return
+    const leftRealMs = l.streamStartMs + l.getCurrentTime() * 1000
+    // seek() clamps to >= 0, so this always does something.
+    r.seek((leftRealMs - r.streamStartMs) / 1000)
+  }
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-black md:flex-row">
-      <Pane videoId={a!} />
+      <Pane videoId={a!} controlRef={leftRef} />
       {b ? (
-        <Pane videoId={b} closeTo={{ a }} />
+        <Pane
+          videoId={b}
+          controlRef={rightRef}
+          onSync={syncToLeft}
+          closeTo={{ a }}
+        />
       ) : (
         <Picker excludeId={a!} />
       )}
@@ -52,9 +70,13 @@ function Split() {
 function Pane({
   videoId,
   closeTo,
+  controlRef,
+  onSync,
 }: {
   videoId: string
   closeTo?: { a?: string }
+  controlRef?: Ref<TwitchPlayerHandle>
+  onSync?: () => void
 }) {
   const q = useQuery({
     queryKey: ['watch', videoId],
@@ -65,10 +87,13 @@ function Pane({
     <div className="relative h-1/2 w-full md:h-full md:flex-1">
       {q.data ? (
         <TwitchPlayer
+          ref={controlRef}
           videoId={q.data.twitchVideoId}
           vodId={q.data.id}
           initialPosition={q.data.position ?? 0}
           duration={q.data.durationSeconds ?? 0}
+          streamStartedAt={q.data.createdAtTwitch}
+          onSync={onSync}
         />
       ) : (
         <div className="flex h-full items-center justify-center text-sm text-white/60">

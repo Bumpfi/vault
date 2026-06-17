@@ -12,6 +12,22 @@ export function formatDuration(seconds: number | null): string {
   return `${m}m`
 }
 
+/** Real-world wall-clock time of a VOD moment = stream start + offset secs. */
+export function realClock(
+  startedAt: Date | string | null,
+  offsetSeconds: number,
+): string | null {
+  if (!startedAt) return null
+  const start = typeof startedAt === 'string' ? new Date(startedAt) : startedAt
+  const t = new Date(start.getTime() + offsetSeconds * 1000)
+  return t.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+}
+
 export function timeAgo(date: Date | string | null): string {
   if (!date) return ''
   const d = typeof date === 'string' ? new Date(date) : date
