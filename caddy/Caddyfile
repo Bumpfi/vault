@@ -1,0 +1,11 @@
+# LAN HTTPS with Caddy's internal (self-signed) CA — no public exposure.
+# SITE_ADDRESS is your chosen https host, e.g. https://vault.home or
+# https://192.168.1.50 (set in .env).
+{
+	local_certs
+	auto_https disable_redirects
+}
+
+{$SITE_ADDRESS} {
+	reverse_proxy web:3000
+}

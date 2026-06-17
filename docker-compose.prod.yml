@@ -1,0 +1,76 @@
+# Production stack for self-hosting on a LAN (Phase 8). See DEPLOY.md.
+# Caddy terminates HTTPS with a self-signed cert so Twitch OAuth works.
+# Usage: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vault}
+      POSTGRES_DB: ${POSTGRES_DB:-vault}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-vault}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    image: vault:latest
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - '3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: vault:latest # reuses the image built by `web`
+    restart: unless-stopped
+    command: ['node_modules/.bin/tsx', 'worker/index.ts']
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # HTTPS reverse proxy (self-signed cert via Caddy's internal CA) so Twitch
+  # OAuth — which requires https off-localhost — works on the LAN.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '443:443'
+      - '80:80'
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  redisdata:
+  caddydata:
+  caddyconfig:

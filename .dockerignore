@@ -1,0 +1,15 @@
+node_modules
+.output
+dist
+.git
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
+.tanstack
+.nitro
+.vinxi
+.wrangler
+.vscode
+.idea

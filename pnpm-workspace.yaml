@@ -1,9 +1,15 @@
+# Single source of pnpm settings (do not duplicate in package.json).
 verifyDepsBeforeRun: false
+# Ignored optional build scripts shouldn't fail a fresh install (e.g. Docker).
+strictDepBuilds: false
 onlyBuiltDependencies:
   - esbuild
   - lightningcss
-  - unrs-resolver
   - msgpackr-extract
+  - unrs-resolver
+# Explicit decision so pnpm stops re-prompting for this optional native dep.
+allowBuilds:
+  '@parcel/watcher': false
 overrides:
-  # bullmq pins ioredis exactly; dedupe so its Redis instance type matches.
+  # Dedupe ioredis to the version bullmq pins, so its Redis type matches ours.
   ioredis: 5.10.1

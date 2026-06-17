@@ -1,15 +1,20 @@
 import { eq } from 'drizzle-orm'
 import { db } from '#/db'
-import { streamer, vod } from '#/db/schema'
+import { streamer, subscription, vod } from '#/db/schema'
 import { getAppToken, getArchiveVideos, parseDuration } from '#/lib/twitch'
 
-// Poll each subscribed streamer's latest archive VODs and upsert them.
-// Shared by the BullMQ worker (scheduled) and the manual-refresh server fn.
+// Poll every streamer that at least one user subscribes to, and upsert their
+// latest archive VODs. Shared by the BullMQ worker (scheduled) and the
+// manual-refresh server fn.
 export async function pollVods() {
   const subs = await db
-    .select()
+    .selectDistinct({
+      id: streamer.id,
+      twitchUserId: streamer.twitchUserId,
+      login: streamer.login,
+    })
     .from(streamer)
-    .where(eq(streamer.subscribed, true))
+    .innerJoin(subscription, eq(subscription.streamerId, streamer.id))
 
   if (subs.length === 0) {
     console.log('[poll-vods] no subscribed streamers, skipping')

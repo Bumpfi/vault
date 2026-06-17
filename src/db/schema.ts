@@ -5,6 +5,7 @@ import {
   serial,
   text,
   timestamp,
+  unique,
 } from 'drizzle-orm/pg-core'
 
 // ── Better Auth tables ───────────────────────────────────────────────
@@ -72,11 +73,29 @@ export const streamer = pgTable('streamer', {
   broadcasterType: text('broadcaster_type').notNull().default(''),
   // Manual retention-days override (Phase 6); null = derive from tier.
   retentionOverride: integer('retention_override'),
-  subscribed: boolean('subscribed').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
 export type Streamer = typeof streamer.$inferSelect
+
+// Per-user subscription to a streamer. Replaces the old global
+// streamer.subscribed flag — each user has their own feed.
+export const subscription = pgTable(
+  'subscription',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    streamerId: integer('streamer_id')
+      .notNull()
+      .references(() => streamer.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [unique('subscription_user_streamer_unq').on(t.userId, t.streamerId)],
+)
+
+export type Subscription = typeof subscription.$inferSelect
 
 export const vod = pgTable('vod', {
   id: serial('id').primaryKey(),
@@ -97,21 +116,27 @@ export const vod = pgTable('vod', {
   estimatedExpiryAt: timestamp('estimated_expiry_at'), // Phase 6
   firstSeenAt: timestamp('first_seen_at').notNull().defaultNow(),
   isAvailable: boolean('is_available').notNull().default(true),
-  watched: boolean('watched').notNull().default(false),
 })
 
 export type Vod = typeof vod.$inferSelect
 
-export const watchProgress = pgTable('watch_progress', {
-  id: serial('id').primaryKey(),
-  vodId: integer('vod_id')
-    .notNull()
-    .unique()
-    .references(() => vod.id, { onDelete: 'cascade' }),
-  positionSeconds: integer('position_seconds').notNull().default(0),
-  durationSeconds: integer('duration_seconds'),
-  completed: boolean('completed').notNull().default(false),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+export const watchProgress = pgTable(
+  'watch_progress',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    vodId: integer('vod_id')
+      .notNull()
+      .references(() => vod.id, { onDelete: 'cascade' }),
+    positionSeconds: integer('position_seconds').notNull().default(0),
+    durationSeconds: integer('duration_seconds'),
+    completed: boolean('completed').notNull().default(false),
+    watched: boolean('watched').notNull().default(false),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (t) => [unique('watch_progress_user_vod_unq').on(t.userId, t.vodId)],
+)
 
 export type WatchProgress = typeof watchProgress.$inferSelect

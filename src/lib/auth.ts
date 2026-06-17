@@ -5,7 +5,12 @@ import { APIError } from 'better-auth/api'
 import { db } from '#/db'
 import * as schema from '#/db/schema'
 
-const ALLOWED_TWITCH_USER_ID = process.env.ALLOWED_TWITCH_USER_ID
+// Comma-separated Twitch user ids allowed to log in. Empty/unset = open
+// signup (anyone with a Twitch account gets their own Vault).
+const ALLOWED_TWITCH_USER_IDS = (process.env.ALLOWED_TWITCH_USER_IDS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -19,10 +24,14 @@ export const auth = betterAuth({
       // Default scopes are user:read:email + openid. Add follows import.
       scope: ['user:read:follows'],
       // Allowlist gate: profile.sub is the Twitch numeric user id, available
-      // before any user/account row is written. Reject anyone else here so no
-      // orphan rows are created.
+      // before any user/account row is written. When an allowlist is set,
+      // reject anyone not on it (no orphan rows are created). Empty list =
+      // open signup.
       mapProfileToUser: (profile) => {
-        if (profile.sub !== ALLOWED_TWITCH_USER_ID) {
+        if (
+          ALLOWED_TWITCH_USER_IDS.length > 0 &&
+          !ALLOWED_TWITCH_USER_IDS.includes(profile.sub)
+        ) {
           throw new APIError('FORBIDDEN', {
             message: 'This Twitch account is not allowed to use Vault.',
           })
