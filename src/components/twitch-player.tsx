@@ -61,6 +61,7 @@ export const TwitchPlayer = forwardRef<
   { videoId, vodId, initialPosition, duration, onTime, streamStartedAt, onSync },
   ref,
 ) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<TwitchPlayerInstance | null>(null)
   const lastSaved = useRef(0)
@@ -152,10 +153,40 @@ export const TwitchPlayer = forwardRef<
     }
   }, [videoId, vodId, initialPosition, duration])
 
+  // Keep the clock live + visible in every state. Twitch's own fullscreen
+  // button fullscreens its cross-origin iframe, over which our overlay can't
+  // render — so redirect that to fullscreen OUR wrapper instead. Also re-sync
+  // the time immediately on fullscreen / tab-visibility / focus changes.
+  useEffect(() => {
+    const resync = () => {
+      const t = playerRef.current?.getCurrentTime()
+      if (t && t > 0) setSeconds(t)
+    }
+    const onFullscreen = () => {
+      const fsEl = document.fullscreenElement
+      const wrapper = wrapperRef.current
+      if (fsEl && wrapper && fsEl !== wrapper && wrapper.contains(fsEl)) {
+        void document
+          .exitFullscreen()
+          .then(() => wrapper.requestFullscreen())
+          .catch(() => {})
+      }
+      resync()
+    }
+    document.addEventListener('fullscreenchange', onFullscreen)
+    document.addEventListener('visibilitychange', resync)
+    window.addEventListener('focus', resync)
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreen)
+      document.removeEventListener('visibilitychange', resync)
+      window.removeEventListener('focus', resync)
+    }
+  }, [])
+
   const clock = streamStartedAt ? realClock(streamStartedAt, seconds) : null
 
   return (
-    <div className="group relative size-full bg-black">
+    <div ref={wrapperRef} className="group relative size-full bg-black">
       <div ref={containerRef} className="size-full" />
       {/* Controls cluster, bottom-left next to Twitch's controls. Appears with
           the controls on hover; pointer-events-none so it never blocks them. */}

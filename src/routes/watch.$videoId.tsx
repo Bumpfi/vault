@@ -49,8 +49,14 @@ function Watch() {
             />
           </div>
           {showChat ? (
-            <aside className="h-72 w-full overflow-hidden rounded-lg border bg-card lg:h-auto lg:w-[340px] lg:flex-none lg:self-stretch">
-              <ChatReplay videoId={data.twitchVideoId} currentTime={currentTime} />
+            <aside className="relative h-72 w-full overflow-hidden rounded-lg border bg-card lg:h-auto lg:w-[340px] lg:flex-none lg:self-stretch">
+              {/* absolute inner so chat content height never grows the row */}
+              <div className="absolute inset-0">
+                <ChatReplay
+                  videoId={data.twitchVideoId}
+                  currentTime={currentTime}
+                />
+              </div>
             </aside>
           ) : null}
         </div>

@@ -7,8 +7,10 @@ import {
   importFollows,
   listStreamers,
   setAllSubscribed,
+  setStreamerCategory,
   setSubscribed,
 } from '#/server/streamers'
+import { getSettings, saveSettings } from '#/server/settings'
 import { AppHeader } from '#/components/app-header'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -33,6 +35,7 @@ function Settings() {
     queryKey: ['streamers'],
     queryFn: () => listStreamers(),
   })
+  const settings = useQuery({ queryKey: ['settings'], queryFn: () => getSettings() })
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['streamers'] })
 
@@ -66,8 +69,30 @@ function Settings() {
     onSuccess: () => void invalidate(),
   })
 
+  const catMut = useMutation({
+    mutationFn: (input: { streamerId: number; category: string | null }) =>
+      setStreamerCategory({ data: input }),
+    onSuccess: () => void invalidate(),
+  })
+
+  const saveSettingsMut = useMutation({
+    mutationFn: (input: {
+      defaultCategory: string | null
+      unwatchedDefault: boolean
+    }) => saveSettings({ data: input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
+  })
+
   const all = streamers.data ?? []
   const subscribedCount = all.filter((s) => s.subscribed).length
+  const categories = useMemo(
+    () =>
+      [...new Set(all.map((s) => s.category).filter(Boolean))].sort() as Array<string>,
+    [all],
+  )
+
+  const defaultCategory = settings.data?.defaultCategory ?? ''
+  const unwatchedDefault = settings.data?.unwatchedDefault ?? false
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -83,6 +108,59 @@ function Settings() {
       <AppHeader />
       <div className="mx-auto max-w-2xl p-8">
         <h1 className="mb-6 text-3xl font-bold">Settings</h1>
+
+        <datalist id="vault-categories">
+          {categories.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
+
+        {/* Preferences */}
+        <section className="mb-8 space-y-3">
+          <h2 className="text-lg font-semibold">Preferences</h2>
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div>
+              <div className="font-medium">Default category</div>
+              <div className="text-xs text-muted-foreground">
+                Pre-selected category filter on the dashboard.
+              </div>
+            </div>
+            <select
+              value={defaultCategory}
+              onChange={(e) =>
+                saveSettingsMut.mutate({
+                  defaultCategory: e.target.value || null,
+                  unwatchedDefault,
+                })
+              }
+              className="h-9 rounded-md border bg-background px-2 text-sm"
+            >
+              <option value="">All</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div>
+              <div className="font-medium">Show unwatched by default</div>
+              <div className="text-xs text-muted-foreground">
+                Start the dashboard with the “Unwatched” filter on.
+              </div>
+            </div>
+            <Switch
+              checked={unwatchedDefault}
+              onCheckedChange={(checked) =>
+                saveSettingsMut.mutate({
+                  defaultCategory: defaultCategory || null,
+                  unwatchedDefault: checked,
+                })
+              }
+            />
+          </div>
+        </section>
 
         <section className="mb-6 space-y-4">
           <h2 className="text-lg font-semibold">Streamers</h2>
@@ -150,29 +228,51 @@ function Settings() {
             filtered.map((s) => (
               <div
                 key={s.id}
-                className="flex items-center justify-between rounded-md border p-3"
+                className="flex items-center justify-between gap-3 rounded-md border p-3"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   {s.profileImageUrl ? (
                     <img
                       src={s.profileImageUrl}
                       alt=""
-                      className="size-8 rounded-full"
+                      className="size-8 shrink-0 rounded-full"
                     />
                   ) : null}
-                  <div>
-                    <div className="font-medium">{s.displayName}</div>
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{s.displayName}</div>
                     <div className="text-xs text-muted-foreground">
                       {s.broadcasterType || 'standard'}
                     </div>
                   </div>
                 </div>
-                <Switch
-                  checked={s.subscribed}
-                  onCheckedChange={(checked) =>
-                    subMut.mutate({ id: s.id, subscribed: checked })
-                  }
-                />
+                <div className="flex shrink-0 items-center gap-2">
+                  {s.subscribed ? (
+                    <Input
+                      key={s.category ?? ''}
+                      list="vault-categories"
+                      defaultValue={s.category ?? ''}
+                      placeholder="Category"
+                      className="h-8 w-28"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.currentTarget.blur()
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim()
+                        if (v !== (s.category ?? ''))
+                          catMut.mutate({
+                            streamerId: s.id,
+                            category: v || null,
+                          })
+                      }}
+                    />
+                  ) : null}
+                  <Switch
+                    checked={s.subscribed}
+                    onCheckedChange={(checked) =>
+                      subMut.mutate({ id: s.id, subscribed: checked })
+                    }
+                  />
+                </div>
               </div>
             ))
           ) : all.length > 0 ? (

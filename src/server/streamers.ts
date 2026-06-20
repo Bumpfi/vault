@@ -76,6 +76,7 @@ export const listStreamers = createServerFn({ method: 'GET' }).handler(
         profileImageUrl: streamer.profileImageUrl,
         broadcasterType: streamer.broadcasterType,
         subscribed: sql<boolean>`${subscription.id} is not null`,
+        category: subscription.category,
       })
       .from(streamer)
       .leftJoin(
@@ -136,6 +137,25 @@ export const setSubscribed = createServerFn({ method: 'POST' })
           ),
         )
     }
+    return { ok: true }
+  })
+
+export const setStreamerCategory = createServerFn({ method: 'POST' })
+  .validator((input: { streamerId: number; category: string | null }) => input)
+  .handler(async ({ data }) => {
+    const { headers } = getRequest()
+    const session = await auth.api.getSession({ headers })
+    if (!session) throw new Error('Unauthorized')
+    const category = data.category?.trim() || null
+    await db
+      .update(subscription)
+      .set({ category })
+      .where(
+        and(
+          eq(subscription.userId, session.user.id),
+          eq(subscription.streamerId, data.streamerId),
+        ),
+      )
     return { ok: true }
   })
 

@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, lte } from 'drizzle-orm'
 import { db } from '#/db'
 import { vod, watchProgress } from '#/db/schema'
 import { requireUserId } from '#/lib/current-user'
@@ -63,6 +63,42 @@ export const saveProgress = createServerFn({ method: 'POST' })
         },
       })
     return { completed }
+  })
+
+// Mark the given VOD and every OLDER VOD from the same streamer as watched
+// (for catching up on a backlog). Older = published at or before this one.
+export const markOlderWatched = createServerFn({ method: 'POST' })
+  .validator((vodId: number) => vodId)
+  .handler(async ({ data: vodId }) => {
+    const userId = await requireUserId()
+    const anchor = (
+      await db
+        .select({ streamerId: vod.streamerId, publishedAt: vod.publishedAt })
+        .from(vod)
+        .where(eq(vod.id, vodId))
+        .limit(1)
+    )[0]
+    if (!anchor?.publishedAt) return { marked: 0 }
+
+    const targets = await db
+      .select({ id: vod.id })
+      .from(vod)
+      .where(
+        and(
+          eq(vod.streamerId, anchor.streamerId),
+          lte(vod.publishedAt, anchor.publishedAt),
+        ),
+      )
+    if (targets.length === 0) return { marked: 0 }
+
+    await db
+      .insert(watchProgress)
+      .values(targets.map((t) => ({ userId, vodId: t.id, watched: true })))
+      .onConflictDoUpdate({
+        target: [watchProgress.userId, watchProgress.vodId],
+        set: { watched: true, updatedAt: new Date() },
+      })
+    return { marked: targets.length }
   })
 
 export const setWatched = createServerFn({ method: 'POST' })

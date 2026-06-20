@@ -18,6 +18,7 @@ const feedColumns = {
   streamerName: streamer.displayName,
   streamerLogin: streamer.login,
   profileImageUrl: streamer.profileImageUrl,
+  category: subscription.category,
   position: watchProgress.positionSeconds,
 }
 

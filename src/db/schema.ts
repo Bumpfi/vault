@@ -90,12 +90,27 @@ export const subscription = pgTable(
     streamerId: integer('streamer_id')
       .notNull()
       .references(() => streamer.id, { onDelete: 'cascade' }),
+    // User-assigned grouping, e.g. "RP", "Variety". Null = uncategorized.
+    category: text('category'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [unique('subscription_user_streamer_unq').on(t.userId, t.streamerId)],
 )
 
 export type Subscription = typeof subscription.$inferSelect
+
+// Per-user dashboard preferences.
+export const userSetting = pgTable('user_setting', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  defaultCategory: text('default_category'),
+  unwatchedDefault: boolean('unwatched_default').notNull().default(false),
+})
+
+export type UserSetting = typeof userSetting.$inferSelect
 
 export const vod = pgTable('vod', {
   id: serial('id').primaryKey(),

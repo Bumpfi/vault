@@ -1,8 +1,9 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchSession } from '#/lib/session'
 import { listContinueWatching, listVods, refreshVods } from '#/server/vods'
+import { getSettings } from '#/server/settings'
 import { AppHeader } from '#/components/app-header'
 import { VodCard } from '#/components/vod-card'
 import { Button } from '#/components/ui/button'
@@ -19,6 +20,7 @@ function Home() {
   const qc = useQueryClient()
   const [unwatchedOnly, setUnwatchedOnly] = useState(false)
   const [streamerId, setStreamerId] = useState<number | null>(null)
+  const [category, setCategory] = useState<string | null>(null)
 
   const vods = useQuery({
     queryKey: ['vods'],
@@ -30,6 +32,17 @@ function Home() {
     queryFn: () => listContinueWatching(),
     refetchOnMount: 'always',
   })
+  const settings = useQuery({ queryKey: ['settings'], queryFn: () => getSettings() })
+
+  // Apply saved dashboard defaults once, without clobbering later user changes.
+  const appliedDefaults = useRef(false)
+  useEffect(() => {
+    if (settings.data && !appliedDefaults.current) {
+      appliedDefaults.current = true
+      setUnwatchedOnly(settings.data.unwatchedDefault)
+      setCategory(settings.data.defaultCategory)
+    }
+  }, [settings.data])
 
   const refreshMut = useMutation({
     mutationFn: () => refreshVods(),
@@ -39,19 +52,34 @@ function Home() {
     },
   })
 
+  const categories = useMemo(
+    () =>
+      [
+        ...new Set(vods.data?.map((v) => v.category).filter(Boolean)),
+      ].sort() as Array<string>,
+    [vods.data],
+  )
+
+  const inCategory = (c: string | null) => !category || c === category
+
   const streamers = useMemo(() => {
     const map = new Map<number, string>()
-    vods.data?.forEach((v) => map.set(v.streamerId, v.streamerName))
+    vods.data
+      ?.filter((v) => inCategory(v.category))
+      .forEach((v) => map.set(v.streamerId, v.streamerName))
     return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]))
-  }, [vods.data])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vods.data, category])
 
   const filtered = useMemo(() => {
     return (vods.data ?? []).filter((v) => {
+      if (!inCategory(v.category)) return false
       if (unwatchedOnly && v.watched) return false
       if (streamerId !== null && v.streamerId !== streamerId) return false
       return true
     })
-  }, [vods.data, unwatchedOnly, streamerId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vods.data, category, unwatchedOnly, streamerId])
 
   return (
     <div>
@@ -68,6 +96,37 @@ function Home() {
               ))}
             </div>
           </section>
+        ) : null}
+
+        {categories.length > 0 ? (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Category
+            </span>
+            <Button
+              variant={category === null ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setCategory(null)
+                setStreamerId(null)
+              }}
+            >
+              All
+            </Button>
+            {categories.map((c) => (
+              <Button
+                key={c}
+                variant={category === c ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setCategory(c)
+                  setStreamerId(null)
+                }}
+              >
+                {c}
+              </Button>
+            ))}
+          </div>
         ) : null}
 
         <div className="mb-4 flex flex-wrap items-center gap-2">

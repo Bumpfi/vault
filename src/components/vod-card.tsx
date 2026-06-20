@@ -1,8 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check } from 'lucide-react'
+import { Check, CheckCheck } from 'lucide-react'
 import type { FeedVod } from '#/server/vods'
-import { setWatched } from '#/server/progress'
+import { markOlderWatched, setWatched } from '#/server/progress'
 import { formatDuration, thumbnail, timeAgo } from '#/lib/format'
 import { cn } from '#/lib/utils'
 
@@ -15,13 +15,20 @@ export function VodCard({ vod }: { vod: FeedVod }) {
       ? Math.min(100, Math.round((vod.position / vod.durationSeconds) * 100))
       : 0
 
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['vods'] })
+    void qc.invalidateQueries({ queryKey: ['continue-watching'] })
+  }
+
   const toggleWatched = useMutation({
     mutationFn: (next: boolean) =>
       setWatched({ data: { vodId: vod.id, watched: next } }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['vods'] })
-      void qc.invalidateQueries({ queryKey: ['continue-watching'] })
-    },
+    onSuccess: invalidate,
+  })
+
+  const markOlder = useMutation({
+    mutationFn: () => markOlderWatched({ data: vod.id }),
+    onSuccess: invalidate,
   })
 
   return (
@@ -89,26 +96,41 @@ export function VodCard({ vod }: { vod: FeedVod }) {
         </div>
       </Link>
 
-      {/* Hover action: toggle watched without navigating */}
-      <button
-        type="button"
-        title={vod.watched ? 'Mark unwatched' : 'Mark watched'}
-        disabled={toggleWatched.isPending}
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          toggleWatched.mutate(!vod.watched)
-        }}
-        className={cn(
-          'absolute right-1 top-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium opacity-0 shadow transition-opacity group-hover:opacity-100',
-          vod.watched
-            ? 'bg-background text-foreground hover:bg-accent'
-            : 'bg-primary text-primary-foreground hover:bg-primary/90',
-        )}
-      >
-        <Check className="size-3.5" />
-        {vod.watched ? 'Unwatch' : 'Watched'}
-      </button>
+      {/* Hover actions (don't navigate) */}
+      <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <button
+          type="button"
+          title="Mark this and all older VODs from this streamer as watched"
+          disabled={markOlder.isPending}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            markOlder.mutate()
+          }}
+          className="flex items-center justify-center rounded-md bg-background p-1.5 text-foreground shadow hover:bg-accent"
+        >
+          <CheckCheck className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          title={vod.watched ? 'Mark unwatched' : 'Mark watched'}
+          disabled={toggleWatched.isPending}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            toggleWatched.mutate(!vod.watched)
+          }}
+          className={cn(
+            'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow',
+            vod.watched
+              ? 'bg-background text-foreground hover:bg-accent'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90',
+          )}
+        >
+          <Check className="size-3.5" />
+          {vod.watched ? 'Unwatch' : 'Watched'}
+        </button>
+      </div>
     </div>
   )
 }
