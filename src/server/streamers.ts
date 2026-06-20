@@ -11,8 +11,8 @@ import {
   getLiveUserIds,
   getUserByLogin,
   getUsersByIds,
-  type TwitchUser,
 } from '#/lib/twitch'
+import type { TwitchUser } from '#/lib/twitch'
 
 /** Resolve the current user's id + (auto-refreshed) Twitch access token. */
 async function requireTwitchAuth() {

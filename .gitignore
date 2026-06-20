@@ -12,3 +12,10 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# Local editor / assistant context (not part of the project)
+.claude
+.vscode
+.idea
+CLAUDE.md
+AGENTS.md

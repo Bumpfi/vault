@@ -33,16 +33,16 @@ function Home() {
     queryFn: () => listContinueWatching(),
     refetchOnMount: 'always',
   })
-  const settings = useQuery({ queryKey: ['settings'], queryFn: () => getSettings() })
+  const settings = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => getSettings(),
+  })
   const liveQuery = useQuery({
     queryKey: ['live-streamers'],
     queryFn: () => listLiveStreamerIds(),
     refetchInterval: 60_000,
   })
-  const live = useMemo(
-    () => new Set(liveQuery.data ?? []),
-    [liveQuery.data],
-  )
+  const live = useMemo(() => new Set(liveQuery.data ?? []), [liveQuery.data])
 
   // Apply saved dashboard defaults once, without clobbering later user changes.
   const appliedDefaults = useRef(false)
@@ -78,7 +78,6 @@ function Home() {
       ?.filter((v) => inCategory(v.category))
       .forEach((v) => map.set(v.streamerId, v.streamerName))
     return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vods.data, category])
 
   const filtered = useMemo(() => {
@@ -88,7 +87,6 @@ function Home() {
       if (streamerId !== null && v.streamerId !== streamerId) return false
       return true
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vods.data, category, unwatchedOnly, streamerId])
 
   return (

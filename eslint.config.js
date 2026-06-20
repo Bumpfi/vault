@@ -11,6 +11,9 @@ export default [
       'sort-imports': 'off',
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/require-await': 'off',
+      // Noisy against defensive checks on external/runtime data (e.g. Drizzle
+      // types `rows[0]` as defined when it can be undefined at runtime).
+      '@typescript-eslint/no-unnecessary-condition': 'off',
       'pnpm/json-enforce-catalog': 'off',
     },
   },

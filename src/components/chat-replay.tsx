@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getVodChat, type ChatComment } from '#/server/chat'
+import { getVodChat } from '#/server/chat'
+import type { ChatComment } from '#/server/chat'
 import { realClock } from '#/lib/format'
 
 const LOOKAHEAD_S = 30 // keep chat buffered this far ahead of playback
@@ -38,7 +39,8 @@ export function ChatReplay({
         data: {
           videoId,
           offsetSeconds: fromOffset,
-          cursor: fromOffset == null ? (cursorRef.current ?? undefined) : undefined,
+          cursor:
+            fromOffset == null ? (cursorRef.current ?? undefined) : undefined,
         },
       })
       cursorRef.current = res.cursor
@@ -75,7 +77,6 @@ export function ChatReplay({
     setComments([])
     prevTimeRef.current = 0
     resetTo(0)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId])
 
   // React to playback time: detect seeks, keep buffering ahead.
@@ -92,12 +93,10 @@ export function ChatReplay({
     if (coveredRef.current < t + LOOKAHEAD_S) {
       void fetchMore()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTime])
 
   const visible = useMemo(
-    () =>
-      comments.filter((c) => c.offset <= currentTime).slice(-MAX_VISIBLE),
+    () => comments.filter((c) => c.offset <= currentTime).slice(-MAX_VISIBLE),
     [comments, currentTime],
   )
 

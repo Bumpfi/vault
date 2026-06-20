@@ -17,7 +17,9 @@ export async function checkAvailability() {
     token,
     rows.map((r) => r.twitchVideoId),
   )
-  const goneIds = rows.filter((r) => !existing.has(r.twitchVideoId)).map((r) => r.id)
+  const goneIds = rows
+    .filter((r) => !existing.has(r.twitchVideoId))
+    .map((r) => r.id)
   if (goneIds.length > 0) {
     await db
       .update(vod)

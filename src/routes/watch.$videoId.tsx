@@ -6,7 +6,8 @@ import { getWatchData, setWatched } from '#/server/progress'
 import { getVodChapters } from '#/server/chat'
 import { recoverVod } from '#/server/recovery'
 import { AppHeader } from '#/components/app-header'
-import { TwitchPlayer, type TwitchPlayerHandle } from '#/components/twitch-player'
+import { TwitchPlayer } from '#/components/twitch-player'
+import type { TwitchPlayerHandle } from '#/components/twitch-player'
 import { ChatReplay } from '#/components/chat-replay'
 import { HlsPlayer } from '#/components/hls-player'
 import { Button } from '#/components/ui/button'
@@ -30,13 +31,13 @@ function Watch() {
   const playerRef = useRef<TwitchPlayerHandle>(null)
 
   const recoverMut = useMutation({
-    mutationFn: () => recoverVod({ data: data!.id }),
+    mutationFn: () => recoverVod({ data: data.id }),
     onSuccess: (r) => setRecoveredUrl(r.url),
   })
 
   const chapters = useQuery({
     queryKey: ['chapters', data?.twitchVideoId],
-    queryFn: () => getVodChapters({ data: data!.twitchVideoId }),
+    queryFn: () => getVodChapters({ data: data.twitchVideoId }),
     enabled: !!data,
   })
 

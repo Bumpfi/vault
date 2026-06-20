@@ -27,23 +27,25 @@ const feedColumns = {
 // own watched/resume state.
 export const listVods = createServerFn({ method: 'GET' }).handler(async () => {
   const userId = await requireUserId()
-  return db
-    .select(feedColumns)
-    .from(vod)
-    .innerJoin(streamer, eq(vod.streamerId, streamer.id))
-    .innerJoin(
-      subscription,
-      and(
-        eq(subscription.streamerId, streamer.id),
-        eq(subscription.userId, userId),
-      ),
-    )
-    .leftJoin(
-      watchProgress,
-      and(eq(watchProgress.vodId, vod.id), eq(watchProgress.userId, userId)),
-    )
-    // Deleted VODs stay in the feed with a "Deleted" tag (not filtered out).
-    .orderBy(desc(vod.publishedAt))
+  return (
+    db
+      .select(feedColumns)
+      .from(vod)
+      .innerJoin(streamer, eq(vod.streamerId, streamer.id))
+      .innerJoin(
+        subscription,
+        and(
+          eq(subscription.streamerId, streamer.id),
+          eq(subscription.userId, userId),
+        ),
+      )
+      .leftJoin(
+        watchProgress,
+        and(eq(watchProgress.vodId, vod.id), eq(watchProgress.userId, userId)),
+      )
+      // Deleted VODs stay in the feed with a "Deleted" tag (not filtered out).
+      .orderBy(desc(vod.publishedAt))
+  )
 })
 
 // The current user's started-but-unfinished VODs.

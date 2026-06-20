@@ -58,7 +58,15 @@ export const TwitchPlayer = forwardRef<
     onSync?: () => void
   }
 >(function TwitchPlayer(
-  { videoId, vodId, initialPosition, duration, onTime, streamStartedAt, onSync },
+  {
+    videoId,
+    vodId,
+    initialPosition,
+    duration,
+    onTime,
+    streamStartedAt,
+    onSync,
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -94,7 +102,8 @@ export const TwitchPlayer = forwardRef<
       if (!p) return
       const t = p.getCurrentTime()
       const d = p.getDuration() || duration || 0
-      if (t > 0) void saveProgress({ data: { vodId, position: t, duration: d } })
+      if (t > 0)
+        void saveProgress({ data: { vodId, position: t, duration: d } })
     }
 
     const init = () => {
@@ -195,7 +204,9 @@ export const TwitchPlayer = forwardRef<
             }}
             className="pointer-events-auto flex items-center justify-center rounded bg-black/70 p-1 text-white transition-colors hover:bg-primary hover:text-primary-foreground active:bg-primary"
           >
-            <RefreshCw className={`size-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`size-3.5 ${syncing ? 'animate-spin' : ''}`}
+            />
           </button>
         ) : null}
       </div>

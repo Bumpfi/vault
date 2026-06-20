@@ -35,7 +35,10 @@ function Settings() {
     queryKey: ['streamers'],
     queryFn: () => listStreamers(),
   })
-  const settings = useQuery({ queryKey: ['settings'], queryFn: () => getSettings() })
+  const settings = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => getSettings(),
+  })
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['streamers'] })
 
@@ -87,7 +90,9 @@ function Settings() {
   const subscribedCount = all.filter((s) => s.subscribed).length
   const categories = useMemo(
     () =>
-      [...new Set(all.map((s) => s.category).filter(Boolean))].sort() as Array<string>,
+      [
+        ...new Set(all.map((s) => s.category).filter(Boolean)),
+      ].sort() as Array<string>,
     [all],
   )
 

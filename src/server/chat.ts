@@ -33,7 +33,10 @@ interface GqlEdge {
     id: string
     contentOffsetSeconds: number
     commenter?: { displayName?: string } | null
-    message?: { userColor?: string | null; fragments?: Array<GqlFragment> } | null
+    message?: {
+      userColor?: string | null
+      fragments?: Array<GqlFragment>
+    } | null
   }
 }
 
@@ -53,7 +56,10 @@ export const getVodChapters = createServerFn({ method: 'GET' })
 
     const res = await fetch(GQL, {
       method: 'POST',
-      headers: { 'Client-Id': GQL_CLIENT_ID, 'Content-Type': 'application/json' },
+      headers: {
+        'Client-Id': GQL_CLIENT_ID,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify([
         {
           operationName: 'VideoPlayer_ChapterSelectButtonVideo',
@@ -84,7 +90,8 @@ export const getVodChapters = createServerFn({ method: 'GET' })
     const edges = json[0]?.data?.video?.moments?.edges ?? []
     return edges.map((e) => ({
       positionSeconds: Math.round((e.node.positionMilliseconds ?? 0) / 1000),
-      game: e.node.details?.game?.displayName ?? e.node.description ?? 'Unknown',
+      game:
+        e.node.details?.game?.displayName ?? e.node.description ?? 'Unknown',
     }))
   })
 

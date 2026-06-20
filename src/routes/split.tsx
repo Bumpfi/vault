@@ -6,7 +6,8 @@ import { Film, X } from 'lucide-react'
 import { fetchSession } from '#/lib/session'
 import { getWatchData } from '#/server/progress'
 import { listVods } from '#/server/vods'
-import { TwitchPlayer, type TwitchPlayerHandle } from '#/components/twitch-player'
+import { TwitchPlayer } from '#/components/twitch-player'
+import type { TwitchPlayerHandle } from '#/components/twitch-player'
 import { hueFromString, thumbnail, timeAgo } from '#/lib/format'
 
 export const Route = createFileRoute('/split')({
@@ -130,7 +131,9 @@ function Picker({ excludeId }: { excludeId: string }) {
     if (v.twitchVideoId === excludeId) return false
     if (!sameTimeframe || anchorTime == null || !v.publishedAt) return true
     // Within ±1 day of the first VOD — same roleplay session, different POV.
-    return Math.abs(new Date(v.publishedAt).getTime() - anchorTime) <= ONE_DAY_MS
+    return (
+      Math.abs(new Date(v.publishedAt).getTime() - anchorTime) <= ONE_DAY_MS
+    )
   })
 
   return (

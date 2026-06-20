@@ -34,9 +34,7 @@ function Login() {
             <span className="size-3.5 rounded-[4px] bg-primary shadow-[0_0_14px_rgba(245,185,66,0.55)]" />
             Vault
           </CardTitle>
-          <CardDescription>
-            Your personal Twitch VOD library.
-          </CardDescription>
+          <CardDescription>Your personal Twitch VOD library.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {error ? (

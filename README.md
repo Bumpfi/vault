@@ -1,247 +1,181 @@
-Welcome to your new TanStack Start app! 
+# Vault
 
-# Getting Started
+A self-hosted, multi-user **"Netflix for Twitch VODs"** — track the streamers
+you follow, browse their past broadcasts, and watch them with resume, watched
+state, synced chat replay, split-view, and a real-world clock. Runs entirely on
+your own hardware; private to your LAN.
 
-To run this application:
+> Vault is a discovery and viewing layer on top of Twitch — not an archive.
+> When Twitch deletes a VOD it's gone from the source; Vault flags it (and can
+> attempt a best-effort recovery while the file lingers on Twitch's CDN).
+
+---
+
+## Features
+
+- **Personal feed** — a grid of VODs from the streamers you subscribe to, with
+  watched badges, resume progress bars, and "age" stamps.
+- **Multi-user** — each person logs in with their own Twitch account and gets
+  their own follows, watched state, and resume positions. A shared streamer/VOD
+  catalog under the hood.
+- **Player** — embedded Twitch player with resume, auto-mark-watched at 90%, and
+  a **continue-watching** row.
+- **Real-world clock** — overlay showing the actual time of day a moment was
+  originally streamed.
+- **Synced chat replay** — the original stream chat scrolls in time with
+  playback (seek-aware), with emotes.
+- **Game chapters** — jump to each game played during a stream.
+- **Split view** — two players side by side (e.g. different POVs of the same
+  event) with a one-click "sync to the other stream's real-world time".
+- **Live indicator** — a pulsing tag on streamers who are live right now.
+- **Categories** — tag streamers ("RP", "Variety", …) and filter the feed by
+  category; set a default category + default "unwatched only".
+- **Mark older watched** — clear a backlog in one click.
+- **Deleted detection + recovery** — flags VODs Twitch has removed, and offers a
+  best-effort recovery for recently-deleted ones.
+
+---
+
+## Tech stack
+
+- **[TanStack Start](https://tanstack.com/start)** (React, SSR, server functions)
+- **PostgreSQL** + **[Drizzle ORM](https://orm.drizzle.team)**
+- **[Better Auth](https://better-auth.com)** (Twitch OAuth)
+- **[shadcn/ui](https://ui.shadcn.com)** + **Tailwind CSS v4**
+- **[BullMQ](https://docs.bullmq.io)** + **Redis** (background jobs in a separate
+  worker process)
+- **pnpm**, Node 20+
+- Production: **Docker Compose** + **Caddy** (HTTPS on the LAN)
+
+---
+
+## Self-hosting (quick start)
+
+Vault is designed to run on a home server (e.g. unraid) and be reached over your
+LAN. Twitch OAuth requires HTTPS off-localhost, so a Caddy reverse proxy serves
+the app over HTTPS with a self-signed certificate.
+
+**You need:** Docker + Docker Compose, a [Twitch application](https://dev.twitch.tv/console)
+(Client ID + Secret), and a hostname for the box (e.g. `vault.home`).
 
 ```bash
+git clone <your-fork-url> vault && cd vault
+cp .env.production.example .env      # fill in Twitch creds, a secret, your host
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force
+docker compose -f docker-compose.prod.yml restart worker
+```
+
+Open `https://<your-host>`, accept the certificate warning, and sign in with
+Twitch. **Full step-by-step (hostname/DNS, Twitch redirect URL, updates,
+troubleshooting) is in [DEPLOY.md](DEPLOY.md).**
+
+**Access control:** set `ALLOWED_TWITCH_USER_IDS` (comma-separated Twitch ids) to
+restrict who can sign in, or leave it empty for open signup (fine on a private
+LAN).
+
+### Updating a running server
+
+```bash
+git pull
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+# only if the schema changed:
+docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force
+docker compose -f docker-compose.prod.yml restart worker
+```
+
+Your data lives in the `pgdata` Docker volume and survives updates.
+
+---
+
+## Local development
+
+**Prerequisites:** Node 20+, pnpm 11, Docker (for Postgres + Redis).
+
+```bash
+# 1. Install
 pnpm install
-pnpm dev
+
+# 2. Start Postgres + Redis
+docker compose up -d
+
+# 3. Configure env
+cp .env.example .env.local
+#    fill TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET, generate a secret:
+#    openssl rand -base64 32  ->  BETTER_AUTH_SECRET
+#    (leave ALLOWED_TWITCH_USER_IDS empty for open signup)
+
+# 4. Create the schema
+pnpm db:push
+
+# 5. Run the app and the worker (two terminals)
+pnpm dev        # web app on http://localhost:3000
+pnpm worker     # background jobs (VOD polling, availability checks)
 ```
 
-# Building For Production
+Register `http://localhost:3000/api/auth/callback/twitch` as an OAuth Redirect
+URL in your Twitch app, then open <http://localhost:3000>.
 
-To build this application for production:
+> Env files are loaded into the server via Node's `--env-file` (Vite doesn't put
+> `.env*` into server-side `process.env`). Restart `pnpm dev` after editing env.
 
-```bash
-pnpm build
+### Scripts
+
+| Command | Description |
+|---|---|
+| `pnpm dev` | Web app (port 3000) |
+| `pnpm worker` | Background job worker |
+| `pnpm db:push` | Push the Drizzle schema to Postgres |
+| `pnpm db:studio` | Drizzle Studio |
+| `pnpm build` | Production build (Nitro Node server in `.output/`) |
+| `pnpm start` | Run the production build |
+
+---
+
+## Project structure
+
+```
+src/
+  routes/          File-based routes (feed, watch, split, settings, login, auth)
+  server/          Server functions (data layer): vods, streamers, progress,
+                   settings, chat, recovery — each scoped to the session user
+  lib/             auth, Twitch Helix client, poll/availability logic, helpers
+  components/      Player, chat replay, VOD card, header, shadcn/ui primitives
+  db/              Drizzle schema + client
+worker/            BullMQ worker entrypoint + scheduled jobs
+docker-compose.yml          Local dev infra (Postgres + Redis)
+docker-compose.prod.yml     Production stack (web, worker, postgres, redis, caddy)
 ```
 
-## Testing
+**Architecture:** the web app keeps the request path fast; all heavy/scheduled
+work (polling Twitch for new VODs every 15 min, availability checks every 6 h,
+token refresh) runs in the separate `worker` process. Both share the Drizzle
+schema. Public VOD reads use a Twitch **app access token**; only importing your
+follows uses your **user token** (`user:read:follows` scope).
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+---
 
-```bash
-pnpm test
-```
+## How data is fetched
 
-## Styling
+- **Official Twitch Helix API** — users, followed channels, archive VODs, live
+  status. This is the reliable baseline.
+- **Unofficial endpoints** (best-effort, personal-use): chat replay and game
+  chapters come from Twitch's private GraphQL (the same source community tools
+  use); deleted-VOD recovery reconstructs the CDN playlist URL. These are
+  undocumented and can break if Twitch changes them — the app degrades
+  gracefully (e.g. "chat unavailable") rather than erroring.
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+## Known limitations
 
-### Removing Tailwind CSS
+- **Chat / chapters / recovery** rely on unofficial endpoints (above).
+- **Deleted VODs** are only recoverable for a short window while their segments
+  remain on Twitch's CDN; recovered VODs play in a basic HLS player with no chat.
+- **Expiry timing** (if enabled) is an estimate — Twitch doesn't expose exact
+  retention via the API.
 
-If you prefer not to use Tailwind CSS:
+---
 
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `pnpm add @tailwindcss/vite tailwindcss --dev`
+## License
 
-## Linting & Formatting
-
-
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
-
-```bash
-pnpm lint
-pnpm format
-pnpm check
-```
-
-
-## Shadcn
-
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
-
-```bash
-pnpm dlx shadcn@latest add button
-```
-
-
-## Setting up Better Auth
-
-1. Generate and set the `BETTER_AUTH_SECRET` environment variable in your `.env.local`:
-
-   ```bash
-   pnpm dlx @better-auth/cli secret
-   ```
-
-2. Visit the [Better Auth documentation](https://www.better-auth.com) to unlock the full potential of authentication in your app.
-
-### Adding a Database (Optional)
-
-Better Auth can work in stateless mode, but to persist user data, add a database:
-
-```typescript
-// src/lib/auth.ts
-import { betterAuth } from "better-auth";
-import { Pool } from "pg";
-
-export const auth = betterAuth({
-  database: new Pool({
-    connectionString: process.env.DATABASE_URL,
-  }),
-  // ... rest of config
-});
-```
-
-Then run migrations:
-
-```bash
-pnpm dlx @better-auth/cli migrate
-```
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+Personal project — use at your own discretion and within Twitch's Terms of
+Service.
