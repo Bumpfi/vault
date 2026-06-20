@@ -55,6 +55,7 @@ function Watch() {
                 <ChatReplay
                   videoId={data.twitchVideoId}
                   currentTime={currentTime}
+                  streamStartedAt={data.createdAtTwitch}
                 />
               </div>
             </aside>

@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, CheckCheck } from 'lucide-react'
+import { Check, CheckCheck, Film } from 'lucide-react'
 import type { FeedVod } from '#/server/vods'
 import { markOlderWatched, setWatched } from '#/server/progress'
-import { formatDuration, thumbnail, timeAgo } from '#/lib/format'
+import { formatDuration, hueFromString, thumbnail, timeAgo } from '#/lib/format'
 import { cn } from '#/lib/utils'
 
 export function VodCard({ vod }: { vod: FeedVod }) {
@@ -45,13 +45,25 @@ export function VodCard({ vod }: { vod: FeedVod }) {
               alt=""
               className={cn(
                 'size-full object-cover transition-transform group-hover:scale-105',
-                vod.watched && 'opacity-40',
+                vod.watched && 'opacity-[0.32]',
               )}
             />
-          ) : null}
+          ) : (
+            <div
+              className={cn(
+                'flex size-full items-center justify-center',
+                vod.watched && 'opacity-[0.32]',
+              )}
+              style={{
+                background: `linear-gradient(150deg, hsl(${hueFromString(vod.streamerName)} 50% 38% / 0.6), hsl(${hueFromString(vod.streamerName)} 40% 18% / 0.3) 44%, #0b0b0d 92%)`,
+              }}
+            >
+              <Film className="size-8 text-white/25" />
+            </div>
+          )}
 
           {vod.durationSeconds ? (
-            <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
+            <span className="absolute bottom-1 right-1 rounded bg-black/[0.74] px-1.5 py-0.5 font-mono text-xs font-medium text-white">
               {formatDuration(vod.durationSeconds)}
             </span>
           ) : null}
@@ -65,9 +77,9 @@ export function VodCard({ vod }: { vod: FeedVod }) {
 
           {/* Resume progress bar */}
           {!vod.watched && percent > 0 ? (
-            <div className="absolute inset-x-0 bottom-0 h-1.5 bg-black/50">
+            <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/10">
               <div
-                className="h-full bg-red-500"
+                className="h-full bg-primary"
                 style={{ width: `${percent}%` }}
               />
             </div>
@@ -83,13 +95,19 @@ export function VodCard({ vod }: { vod: FeedVod }) {
             />
           ) : null}
           <div className="min-w-0">
-            <div className="line-clamp-2 text-sm font-medium" title={vod.title}>
+            <div
+              className={cn(
+                'line-clamp-2 text-sm font-semibold',
+                vod.watched && 'text-[#7d7b76]',
+              )}
+              title={vod.title}
+            >
               {vod.title}
             </div>
             <div className="text-xs text-muted-foreground">
               {vod.streamerName}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="font-mono text-[11px] text-faint">
               {timeAgo(vod.publishedAt)}
             </div>
           </div>
@@ -107,7 +125,7 @@ export function VodCard({ vod }: { vod: FeedVod }) {
             e.stopPropagation()
             markOlder.mutate()
           }}
-          className="flex items-center justify-center rounded-md bg-background p-1.5 text-foreground shadow hover:bg-accent"
+          className="flex items-center justify-center rounded-md border border-white/10 bg-black/50 p-1.5 text-white shadow backdrop-blur-sm hover:bg-black/70"
         >
           <CheckCheck className="size-3.5" />
         </button>
@@ -121,9 +139,9 @@ export function VodCard({ vod }: { vod: FeedVod }) {
             toggleWatched.mutate(!vod.watched)
           }}
           className={cn(
-            'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow',
+            'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold shadow backdrop-blur-sm',
             vod.watched
-              ? 'bg-background text-foreground hover:bg-accent'
+              ? 'border border-white/10 bg-black/50 text-white hover:bg-black/70'
               : 'bg-primary text-primary-foreground hover:bg-primary/90',
           )}
         >

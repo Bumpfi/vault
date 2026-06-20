@@ -100,12 +100,11 @@ function Home() {
 
         {categories.length > 0 ? (
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Category
-            </span>
+            <span className="label-caps">Category</span>
             <Button
               variant={category === null ? 'default' : 'outline'}
               size="sm"
+              className="rounded-full"
               onClick={() => {
                 setCategory(null)
                 setStreamerId(null)
@@ -118,6 +117,7 @@ function Home() {
                 key={c}
                 variant={category === c ? 'default' : 'outline'}
                 size="sm"
+                className="rounded-full"
                 onClick={() => {
                   setCategory(c)
                   setStreamerId(null)
@@ -133,6 +133,7 @@ function Home() {
           <Button
             variant={unwatchedOnly ? 'default' : 'outline'}
             size="sm"
+            className="rounded-full"
             onClick={() => setUnwatchedOnly((v) => !v)}
           >
             Unwatched
@@ -141,6 +142,7 @@ function Home() {
           <Button
             variant={streamerId === null ? 'default' : 'outline'}
             size="sm"
+            className="rounded-full"
             onClick={() => setStreamerId(null)}
           >
             All
@@ -150,6 +152,7 @@ function Home() {
               key={id}
               variant={streamerId === id ? 'default' : 'outline'}
               size="sm"
+              className="rounded-full"
               onClick={() => setStreamerId(id)}
             >
               {name}
@@ -180,7 +183,7 @@ function Home() {
             feed.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
             {filtered.map((v) => (
               <VodCard key={v.id} vod={v} />
             ))}

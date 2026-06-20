@@ -2,12 +2,12 @@ import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import type { Ref } from 'react'
-import { X } from 'lucide-react'
+import { Film, X } from 'lucide-react'
 import { fetchSession } from '#/lib/session'
 import { getWatchData } from '#/server/progress'
 import { listVods } from '#/server/vods'
 import { TwitchPlayer, type TwitchPlayerHandle } from '#/components/twitch-player'
-import { thumbnail, timeAgo } from '#/lib/format'
+import { hueFromString, thumbnail, timeAgo } from '#/lib/format'
 
 export const Route = createFileRoute('/split')({
   validateSearch: (
@@ -170,7 +170,16 @@ function Picker({ excludeId }: { excludeId: string }) {
                   alt=""
                   className="size-full object-cover transition-transform group-hover:scale-105"
                 />
-              ) : null}
+              ) : (
+                <div
+                  className="flex size-full items-center justify-center"
+                  style={{
+                    background: `linear-gradient(150deg, hsl(${hueFromString(v.streamerName)} 50% 38% / 0.6), #0b0b0d 92%)`,
+                  }}
+                >
+                  <Film className="size-6 text-white/25" />
+                </div>
+              )}
             </div>
             <div className="line-clamp-1 text-xs font-medium">{v.title}</div>
             <div className="text-xs text-muted-foreground">

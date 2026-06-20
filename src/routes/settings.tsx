@@ -217,8 +217,9 @@ function Settings() {
             >
               Deselect all
             </Button>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {subscribedCount} / {all.length} subscribed
+            <span className="ml-auto font-mono text-xs text-primary">
+              {subscribedCount} / {all.length}{' '}
+              <span className="text-muted-foreground">subscribed</span>
             </span>
           </div>
 

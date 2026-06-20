@@ -28,20 +28,24 @@ function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm border-white/10 bg-[rgba(15,15,18,0.86)] shadow-[0_24px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <CardHeader>
-          <CardTitle className="text-2xl">Vault</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-2xl tracking-tight">
+            <span className="size-3.5 rounded-[4px] bg-primary shadow-[0_0_14px_rgba(245,185,66,0.55)]" />
+            Vault
+          </CardTitle>
           <CardDescription>
-            Your personal Twitch VOD dashboard. Single user only.
+            Your personal Twitch VOD library.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {error ? (
-            <p className="text-sm text-destructive">
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               That Twitch account isn’t allowed to use this Vault.
-            </p>
+            </div>
           ) : null}
           <Button
+            className="w-full"
             disabled={loading}
             onClick={() => {
               setLoading(true)

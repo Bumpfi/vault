@@ -1,7 +1,16 @@
-/** Substitute Twitch thumbnail %{width}x%{height} placeholders. */
+/** Substitute Twitch thumbnail %{width}x%{height} placeholders. Returns null
+ * for missing or not-yet-processed VODs (Twitch serves a 404/processing
+ * placeholder for recently-finished or still-live VODs). */
 export function thumbnail(url: string | null, w = 440, h = 248): string | null {
-  if (!url) return null
+  if (!url || url.includes('_404') || url.includes('processing')) return null
   return url.replace('%{width}', String(w)).replace('%{height}', String(h))
+}
+
+/** Deterministic hue (0–359) from a string, for placeholder gradients. */
+export function hueFromString(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360
+  return h
 }
 
 export function formatDuration(seconds: number | null): string {

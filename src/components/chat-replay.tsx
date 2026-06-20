@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getVodChat, type ChatComment } from '#/server/chat'
+import { realClock } from '#/lib/format'
 
 const LOOKAHEAD_S = 30 // keep chat buffered this far ahead of playback
 const SEEK_THRESHOLD_S = 5 // jump bigger than this = a seek, reset buffer
@@ -11,9 +12,11 @@ const emoteUrl = (id: string) =>
 export function ChatReplay({
   videoId,
   currentTime,
+  streamStartedAt,
 }: {
   videoId: string
   currentTime: number
+  streamStartedAt?: Date | string | null
 }) {
   const [comments, setComments] = useState<Array<ChatComment>>([])
   const [error, setError] = useState<string | null>(null)
@@ -104,12 +107,22 @@ export function ChatReplay({
     if (el) el.scrollTop = el.scrollHeight
   }, [visible])
 
+  const synced = realClock(streamStartedAt ?? null, currentTime)
+
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b px-3 py-2 text-sm font-semibold">Chat</div>
+      <div className="flex items-center justify-between border-b px-3 py-2">
+        <span className="label-caps">Chat</span>
+        {synced ? (
+          <span className="flex items-center gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-primary" />
+            SYNCED {synced}
+          </span>
+        ) : null}
+      </div>
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-2 text-sm"
+        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-2 text-sm"
       >
         {error ? (
           <p className="text-xs text-destructive">
@@ -122,6 +135,11 @@ export function ChatReplay({
         ) : (
           visible.map((c) => (
             <div key={c.id} className="leading-snug break-words">
+              {streamStartedAt ? (
+                <span className="mr-1.5 font-mono text-[10px] text-faint">
+                  {realClock(streamStartedAt, c.offset)}
+                </span>
+              ) : null}
               <span
                 className="font-semibold"
                 style={{ color: c.color ?? undefined }}
@@ -136,7 +154,7 @@ export function ChatReplay({
                     src={emoteUrl(f.emoteId)}
                     alt={f.text}
                     title={f.text}
-                    className="inline-block h-5 align-middle"
+                    className="mx-0.5 inline-block h-5 rounded-sm bg-primary/10 align-middle"
                   />
                 ) : (
                   <span key={i}>{f.text}</span>
@@ -145,6 +163,9 @@ export function ChatReplay({
             </div>
           ))
         )}
+      </div>
+      <div className="border-t px-3 py-1.5 text-center text-[10px] text-faint">
+        Replay only — chat is read-only
       </div>
     </div>
   )

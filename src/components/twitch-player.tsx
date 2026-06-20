@@ -192,7 +192,8 @@ export const TwitchPlayer = forwardRef<
           the controls on hover; pointer-events-none so it never blocks them. */}
       <div className="pointer-events-none absolute bottom-2 left-[150px] z-10 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
         {clock ? (
-          <span className="rounded bg-black/70 px-1.5 py-0.5 font-mono text-xs tabular-nums text-white">
+          <span className="flex items-center gap-1.5 rounded bg-black/70 px-2 py-1 font-mono text-xs tabular-nums text-white backdrop-blur-sm">
+            <span className="size-1.5 rounded-full bg-primary" />
             {clock}
           </span>
         ) : null}
