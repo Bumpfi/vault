@@ -5,8 +5,10 @@ import { db } from '#/db'
 import { streamer, subscription } from '#/db/schema'
 import { auth } from '#/lib/auth'
 import {
+  getAppToken,
   getCurrentUser,
   getFollowedChannels,
+  getLiveUserIds,
   getUserByLogin,
   getUsersByIds,
   type TwitchUser,
@@ -139,6 +141,34 @@ export const setSubscribed = createServerFn({ method: 'POST' })
     }
     return { ok: true }
   })
+
+// db ids of the user's subscribed streamers that are live right now.
+export const listLiveStreamerIds = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const { headers } = getRequest()
+    const session = await auth.api.getSession({ headers })
+    if (!session) throw new Error('Unauthorized')
+
+    const subs = await db
+      .select({ id: streamer.id, twitchUserId: streamer.twitchUserId })
+      .from(streamer)
+      .innerJoin(
+        subscription,
+        and(
+          eq(subscription.streamerId, streamer.id),
+          eq(subscription.userId, session.user.id),
+        ),
+      )
+    if (subs.length === 0) return [] as Array<number>
+
+    const token = await getAppToken()
+    const live = await getLiveUserIds(
+      token,
+      subs.map((s) => s.twitchUserId),
+    )
+    return subs.filter((s) => live.has(s.twitchUserId)).map((s) => s.id)
+  },
+)
 
 export const setStreamerCategory = createServerFn({ method: 'POST' })
   .validator((input: { streamerId: number; category: string | null }) => input)

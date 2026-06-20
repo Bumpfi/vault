@@ -7,6 +7,8 @@ import { auth } from '#/lib/auth'
 const GQL = 'https://gql.twitch.tv/gql'
 const GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'
 const HASH = 'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a'
+const CHAPTERS_HASH =
+  '8d2793384aac3773beab5e59bd5d6f585aedb923d292800119e03d40cd0f9b41'
 
 export interface ChatFragment {
   text: string
@@ -34,6 +36,57 @@ interface GqlEdge {
     message?: { userColor?: string | null; fragments?: Array<GqlFragment> } | null
   }
 }
+
+export interface VodChapter {
+  positionSeconds: number
+  game: string
+}
+
+// Game chapters (the per-VOD game timeline shown on twitch.tv). Same
+// unofficial GraphQL endpoint as chat.
+export const getVodChapters = createServerFn({ method: 'GET' })
+  .validator((videoId: string) => videoId)
+  .handler(async ({ data: videoId }) => {
+    const { headers } = getRequest()
+    const session = await auth.api.getSession({ headers })
+    if (!session) throw new Error('Unauthorized')
+
+    const res = await fetch(GQL, {
+      method: 'POST',
+      headers: { 'Client-Id': GQL_CLIENT_ID, 'Content-Type': 'application/json' },
+      body: JSON.stringify([
+        {
+          operationName: 'VideoPlayer_ChapterSelectButtonVideo',
+          variables: { includePrivate: false, videoID: videoId },
+          extensions: {
+            persistedQuery: { version: 1, sha256Hash: CHAPTERS_HASH },
+          },
+        },
+      ]),
+    })
+    if (!res.ok) return [] as Array<VodChapter>
+
+    const json = (await res.json()) as Array<{
+      data?: {
+        video?: {
+          moments?: {
+            edges: Array<{
+              node: {
+                positionMilliseconds?: number
+                description?: string
+                details?: { game?: { displayName?: string } | null } | null
+              }
+            }>
+          }
+        }
+      }
+    }>
+    const edges = json[0]?.data?.video?.moments?.edges ?? []
+    return edges.map((e) => ({
+      positionSeconds: Math.round((e.node.positionMilliseconds ?? 0) / 1000),
+      game: e.node.details?.game?.displayName ?? e.node.description ?? 'Unknown',
+    }))
+  })
 
 export const getVodChat = createServerFn({ method: 'GET' })
   .validator(

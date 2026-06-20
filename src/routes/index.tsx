@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchSession } from '#/lib/session'
 import { listContinueWatching, listVods, refreshVods } from '#/server/vods'
 import { getSettings } from '#/server/settings'
+import { listLiveStreamerIds } from '#/server/streamers'
 import { AppHeader } from '#/components/app-header'
 import { VodCard } from '#/components/vod-card'
 import { Button } from '#/components/ui/button'
@@ -33,6 +34,15 @@ function Home() {
     refetchOnMount: 'always',
   })
   const settings = useQuery({ queryKey: ['settings'], queryFn: () => getSettings() })
+  const liveQuery = useQuery({
+    queryKey: ['live-streamers'],
+    queryFn: () => listLiveStreamerIds(),
+    refetchInterval: 60_000,
+  })
+  const live = useMemo(
+    () => new Set(liveQuery.data ?? []),
+    [liveQuery.data],
+  )
 
   // Apply saved dashboard defaults once, without clobbering later user changes.
   const appliedDefaults = useRef(false)
@@ -91,7 +101,7 @@ function Home() {
             <div className="flex gap-5 overflow-x-auto pb-2">
               {continueWatching.data.map((v) => (
                 <div key={v.id} className="w-64 shrink-0">
-                  <VodCard vod={v} />
+                  <VodCard vod={v} live={live.has(v.streamerId)} />
                 </div>
               ))}
             </div>
@@ -155,6 +165,9 @@ function Home() {
               className="rounded-full"
               onClick={() => setStreamerId(id)}
             >
+              {live.has(id) ? (
+                <span className="mr-1 size-1.5 animate-pulse rounded-full bg-destructive" />
+              ) : null}
               {name}
             </Button>
           ))}
@@ -185,7 +198,7 @@ function Home() {
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
             {filtered.map((v) => (
-              <VodCard key={v.id} vod={v} />
+              <VodCard key={v.id} vod={v} live={live.has(v.streamerId)} />
             ))}
           </div>
         )}

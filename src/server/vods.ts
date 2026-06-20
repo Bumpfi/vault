@@ -20,6 +20,7 @@ const feedColumns = {
   profileImageUrl: streamer.profileImageUrl,
   category: subscription.category,
   position: watchProgress.positionSeconds,
+  isAvailable: vod.isAvailable,
 }
 
 // Feed = VODs from streamers the current user subscribes to, with that user's
@@ -41,7 +42,7 @@ export const listVods = createServerFn({ method: 'GET' }).handler(async () => {
       watchProgress,
       and(eq(watchProgress.vodId, vod.id), eq(watchProgress.userId, userId)),
     )
-    .where(eq(vod.isAvailable, true))
+    // Deleted VODs stay in the feed with a "Deleted" tag (not filtered out).
     .orderBy(desc(vod.publishedAt))
 })
 

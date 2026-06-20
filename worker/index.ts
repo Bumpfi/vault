@@ -1,6 +1,7 @@
 import { Queue, Worker } from 'bullmq'
 import IORedis from 'ioredis'
 import { pollVods } from '#/lib/poll-vods.ts'
+import { checkAvailability } from '#/lib/availability.ts'
 import { refreshUserToken } from './jobs/token-refresh.ts'
 
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379'
@@ -16,6 +17,8 @@ const worker = new Worker(
     switch (job.name) {
       case 'poll-vods':
         return pollVods()
+      case 'availability-check':
+        return checkAvailability()
       case 'token-refresh':
         return refreshUserToken()
       default:
@@ -35,6 +38,11 @@ async function main() {
     'poll-vods',
     { every: 15 * 60 * 1000 },
     { name: 'poll-vods' },
+  )
+  await queue.upsertJobScheduler(
+    'availability-check',
+    { every: 6 * 60 * 60 * 1000 },
+    { name: 'availability-check' },
   )
   await queue.upsertJobScheduler(
     'token-refresh',

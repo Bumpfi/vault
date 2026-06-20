@@ -37,6 +37,15 @@ export function realClock(
   })
 }
 
+/** Seconds → "1:02:45" / "2:45" (for chapter jump points). */
+export function formatTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
+}
+
 export function timeAgo(date: Date | string | null): string {
   if (!date) return ''
   const d = typeof date === 'string' ? new Date(date) : date

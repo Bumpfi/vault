@@ -165,6 +165,44 @@ export async function getArchiveVideos(
   return data
 }
 
+/** Of the given video ids, which still exist on Twitch (app token). Deleted
+ * VODs are simply omitted from the response. */
+export async function getExistingVideoIds(
+  token: string,
+  ids: Array<string>,
+): Promise<Set<string>> {
+  const found = new Set<string>()
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100)
+    const { data } = await helixGet<{ id: string }>('/videos', token, {
+      id: batch,
+    })
+    for (const v of data) found.add(v.id)
+  }
+  return found
+}
+
+interface TwitchStream {
+  user_id: string
+}
+
+/** Of the given broadcaster ids, which are live right now (app token). */
+export async function getLiveUserIds(
+  token: string,
+  userIds: Array<string>,
+): Promise<Set<string>> {
+  const live = new Set<string>()
+  for (let i = 0; i < userIds.length; i += 100) {
+    const batch = userIds.slice(i, i + 100)
+    const { data } = await helixGet<TwitchStream>('/streams', token, {
+      user_id: batch,
+      first: '100',
+    })
+    for (const s of data) live.add(s.user_id)
+  }
+  return live
+}
+
 /** Parse Twitch duration ("1h2m3s", "45m10s", "30s") into seconds. */
 export function parseDuration(duration: string): number {
   const m = duration.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/)

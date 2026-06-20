@@ -6,7 +6,7 @@ import { markOlderWatched, setWatched } from '#/server/progress'
 import { formatDuration, hueFromString, thumbnail, timeAgo } from '#/lib/format'
 import { cn } from '#/lib/utils'
 
-export function VodCard({ vod }: { vod: FeedVod }) {
+export function VodCard({ vod, live }: { vod: FeedVod; live?: boolean }) {
   const qc = useQueryClient()
   const thumb = thumbnail(vod.thumbnailUrl)
 
@@ -45,14 +45,14 @@ export function VodCard({ vod }: { vod: FeedVod }) {
               alt=""
               className={cn(
                 'size-full object-cover transition-transform group-hover:scale-105',
-                vod.watched && 'opacity-[0.32]',
+                (vod.watched || !vod.isAvailable) && 'opacity-[0.32]',
               )}
             />
           ) : (
             <div
               className={cn(
                 'flex size-full items-center justify-center',
-                vod.watched && 'opacity-[0.32]',
+                (vod.watched || !vod.isAvailable) && 'opacity-[0.32]',
               )}
               style={{
                 background: `linear-gradient(150deg, hsl(${hueFromString(vod.streamerName)} 50% 38% / 0.6), hsl(${hueFromString(vod.streamerName)} 40% 18% / 0.3) 44%, #0b0b0d 92%)`,
@@ -68,7 +68,11 @@ export function VodCard({ vod }: { vod: FeedVod }) {
             </span>
           ) : null}
 
-          {vod.watched ? (
+          {!vod.isAvailable ? (
+            <span className="absolute left-1 top-1 rounded-md bg-destructive px-2 py-1 text-xs font-bold text-white shadow">
+              Deleted
+            </span>
+          ) : vod.watched ? (
             <span className="absolute left-1 top-1 flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground shadow">
               <Check className="size-3.5" />
               Watched
@@ -104,8 +108,14 @@ export function VodCard({ vod }: { vod: FeedVod }) {
             >
               {vod.title}
             </div>
-            <div className="text-xs text-muted-foreground">
-              {vod.streamerName}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {live ? (
+                <span className="flex items-center gap-1 font-mono text-[10px] font-bold text-destructive">
+                  <span className="size-1.5 animate-pulse rounded-full bg-destructive" />
+                  LIVE
+                </span>
+              ) : null}
+              <span className="truncate">{vod.streamerName}</span>
             </div>
             <div className="font-mono text-[11px] text-faint">
               {timeAgo(vod.publishedAt)}
