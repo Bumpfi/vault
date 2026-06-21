@@ -43,10 +43,10 @@ async function upsertStreamers(users: Array<TwitchUser>) {
     .onConflictDoUpdate({
       target: streamer.twitchUserId,
       set: {
-        login: streamer.login,
-        displayName: streamer.displayName,
-        profileImageUrl: streamer.profileImageUrl,
-        broadcasterType: streamer.broadcasterType,
+        login: sql`excluded.login`,
+        displayName: sql`excluded.display_name`,
+        profileImageUrl: sql`excluded.profile_image_url`,
+        broadcasterType: sql`excluded.broadcaster_type`,
       },
     })
     .returning({ id: streamer.id })

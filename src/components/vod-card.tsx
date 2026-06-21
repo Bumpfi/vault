@@ -58,7 +58,15 @@ export function VodCard({ vod, live }: { vod: FeedVod; live?: boolean }) {
                 background: `linear-gradient(150deg, hsl(${hueFromString(vod.streamerName)} 50% 38% / 0.6), hsl(${hueFromString(vod.streamerName)} 40% 18% / 0.3) 44%, #0b0b0d 92%)`,
               }}
             >
-              <Film className="size-8 text-white/25" />
+              {vod.profileImageUrl ? (
+                <img
+                  src={vod.profileImageUrl}
+                  alt=""
+                  className="size-16 rounded-full object-cover opacity-90 transition-all duration-300 [filter:grayscale(0.6)] group-hover:opacity-100 group-hover:[filter:grayscale(0)]"
+                />
+              ) : (
+                <Film className="size-8 text-white/25" />
+              )}
             </div>
           )}
 

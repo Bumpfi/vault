@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from '#/db'
 import { streamer, subscription, vod } from '#/db/schema'
 import { getAppToken, getArchiveVideos, parseDuration } from '#/lib/twitch'
@@ -46,14 +46,15 @@ export async function pollVods() {
             type: v.type,
           })),
         )
-        // Refresh mutable metadata; never touch watched / isAvailable.
+        // Refresh mutable metadata to the newly-polled (excluded) values;
+        // never touch watched / isAvailable.
         .onConflictDoUpdate({
           target: vod.twitchVideoId,
           set: {
-            title: vod.title,
-            thumbnailUrl: vod.thumbnailUrl,
-            durationSeconds: vod.durationSeconds,
-            publishedAt: vod.publishedAt,
+            title: sql`excluded.title`,
+            thumbnailUrl: sql`excluded.thumbnail_url`,
+            durationSeconds: sql`excluded.duration_seconds`,
+            publishedAt: sql`excluded.published_at`,
           },
         })
       upserted += videos.length
