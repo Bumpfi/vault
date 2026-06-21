@@ -1,6 +1,28 @@
 import { Link, useRouter } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { Moon, Sun } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { saveSettings } from '#/server/settings'
 import { Button } from '#/components/ui/button'
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(true)
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains('dark'))
+  }, [])
+  const toggle = () => {
+    const next = !dark
+    setDark(next)
+    document.documentElement.classList.toggle('dark', next)
+    localStorage.theme = next ? 'dark' : 'light'
+    void saveSettings({ data: { theme: next ? 'dark' : 'light' } })
+  }
+  return (
+    <Button variant="ghost" size="icon" onClick={toggle} title="Toggle theme">
+      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </Button>
+  )
+}
 
 export function AppHeader() {
   const router = useRouter()
@@ -14,6 +36,7 @@ export function AppHeader() {
         Vault
       </Link>
       <nav className="flex items-center gap-2">
+        <ThemeToggle />
         <Button variant="ghost" size="sm" asChild>
           <Link to="/settings">Settings</Link>
         </Button>

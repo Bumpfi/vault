@@ -82,6 +82,7 @@ function Settings() {
     mutationFn: (input: {
       defaultCategory: string | null
       unwatchedDefault: boolean
+      theme: string
     }) => saveSettings({ data: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
   })
@@ -98,6 +99,19 @@ function Settings() {
 
   const defaultCategory = settings.data?.defaultCategory ?? ''
   const unwatchedDefault = settings.data?.unwatchedDefault ?? false
+  const theme = settings.data?.theme ?? 'dark'
+
+  const save = (patch: {
+    defaultCategory?: string | null
+    unwatchedDefault?: boolean
+    theme?: string
+  }) =>
+    saveSettingsMut.mutate({
+      defaultCategory: defaultCategory || null,
+      unwatchedDefault,
+      theme,
+      ...patch,
+    })
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -132,12 +146,7 @@ function Settings() {
             </div>
             <select
               value={defaultCategory}
-              onChange={(e) =>
-                saveSettingsMut.mutate({
-                  defaultCategory: e.target.value || null,
-                  unwatchedDefault,
-                })
-              }
+              onChange={(e) => save({ defaultCategory: e.target.value || null })}
               className="h-9 rounded-md border bg-background px-2 text-sm"
             >
               <option value="">All</option>
@@ -157,13 +166,29 @@ function Settings() {
             </div>
             <Switch
               checked={unwatchedDefault}
-              onCheckedChange={(checked) =>
-                saveSettingsMut.mutate({
-                  defaultCategory: defaultCategory || null,
-                  unwatchedDefault: checked,
-                })
-              }
+              onCheckedChange={(checked) => save({ unwatchedDefault: checked })}
             />
+          </div>
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div>
+              <div className="font-medium">Theme</div>
+              <div className="text-xs text-muted-foreground">
+                Default color mode for your account.
+              </div>
+            </div>
+            <select
+              value={theme}
+              onChange={(e) => {
+                const next = e.target.value
+                document.documentElement.classList.toggle('dark', next === 'dark')
+                localStorage.theme = next
+                save({ theme: next })
+              }}
+              className="h-9 rounded-md border bg-background px-2 text-sm"
+            >
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
           </div>
         </section>
 

@@ -17,28 +17,29 @@ export const getSettings = createServerFn({ method: 'GET' }).handler(
     return {
       defaultCategory: row?.defaultCategory ?? null,
       unwatchedDefault: row?.unwatchedDefault ?? false,
+      theme: row?.theme ?? 'dark',
     }
   },
 )
 
 export const saveSettings = createServerFn({ method: 'POST' })
   .validator(
-    (input: { defaultCategory: string | null; unwatchedDefault: boolean }) =>
-      input,
+    (input: {
+      defaultCategory?: string | null
+      unwatchedDefault?: boolean
+      theme?: string
+    }) => input,
   )
   .handler(async ({ data }) => {
     const userId = await requireUserId()
-    const defaultCategory = data.defaultCategory?.trim() || null
+    const set: Record<string, unknown> = {}
+    if ('defaultCategory' in data)
+      set.defaultCategory = data.defaultCategory?.trim() || null
+    if ('unwatchedDefault' in data) set.unwatchedDefault = data.unwatchedDefault
+    if ('theme' in data) set.theme = data.theme
     await db
       .insert(userSetting)
-      .values({
-        userId,
-        defaultCategory,
-        unwatchedDefault: data.unwatchedDefault,
-      })
-      .onConflictDoUpdate({
-        target: userSetting.userId,
-        set: { defaultCategory, unwatchedDefault: data.unwatchedDefault },
-      })
+      .values({ userId, ...set })
+      .onConflictDoUpdate({ target: userSetting.userId, set })
     return { ok: true }
   })

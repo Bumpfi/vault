@@ -45,6 +45,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
       <head>
+        <script
+          // Default dark; switch to light before paint if the user chose it.
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.theme==='light')document.documentElement.classList.remove('dark')}catch(e){}`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>

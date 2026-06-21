@@ -108,6 +108,7 @@ export const userSetting = pgTable('user_setting', {
     .references(() => user.id, { onDelete: 'cascade' }),
   defaultCategory: text('default_category'),
   unwatchedDefault: boolean('unwatched_default').notNull().default(false),
+  theme: text('theme'), // 'dark' | 'light' | null (= dark)
 })
 
 export type UserSetting = typeof userSetting.$inferSelect

@@ -51,6 +51,11 @@ function Home() {
       appliedDefaults.current = true
       setUnwatchedOnly(settings.data.unwatchedDefault)
       setCategory(settings.data.defaultCategory)
+      document.documentElement.classList.toggle(
+        'dark',
+        settings.data.theme === 'dark',
+      )
+      localStorage.theme = settings.data.theme
     }
   }, [settings.data])
 

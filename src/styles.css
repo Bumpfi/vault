@@ -6,8 +6,34 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── Noir design system (dark, amber-accented) ───────────────────────── */
+/* ── Light (cream) — default tokens ──────────────────────────────────── */
 :root {
+  --background: #f6f1e7;
+  --foreground: #2b2720;
+  --card: #fffcf5;
+  --card-foreground: #2b2720;
+  --popover: #ffffff;
+  --popover-foreground: #2b2720;
+  --primary: #f5b942;
+  --primary-deep: #d9892b;
+  --primary-foreground: #1a1407;
+  --secondary: rgba(43, 39, 32, 0.05);
+  --secondary-foreground: #2b2720;
+  --muted: rgba(43, 39, 32, 0.05);
+  --muted-foreground: #6b665c;
+  --faint: #9a958a;
+  --accent: rgba(43, 39, 32, 0.07);
+  --accent-foreground: #2b2720;
+  --destructive: #dc4a42;
+  --destructive-foreground: #ffffff;
+  --border: rgba(43, 39, 32, 0.12);
+  --input: rgba(43, 39, 32, 0.08);
+  --ring: rgba(245, 185, 66, 0.5);
+  --radius: 0.6rem;
+}
+
+/* ── Noir (dark) ─────────────────────────────────────────────────────── */
+.dark {
   --background: #08080a;
   --foreground: #f3f1ec;
   --card: #141416;
@@ -29,7 +55,6 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.045);
   --ring: rgba(245, 185, 66, 0.45);
-  --radius: 0.6rem;
 }
 
 @theme inline {
@@ -71,19 +96,14 @@ body {
   margin: 0;
   color: var(--foreground);
   font-family: var(--font-sans);
-  background-color: #08080a;
+  background-color: var(--background);
   background:
     radial-gradient(
       900px 520px at 50% -12%,
-      rgba(245, 185, 66, 0.06),
+      rgba(245, 185, 66, 0.07),
       transparent 60%
     ),
-    radial-gradient(
-      720px 520px at 104% 0%,
-      rgba(245, 185, 66, 0.035),
-      transparent 56%
-    ),
-    #08080a;
+    var(--background);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
