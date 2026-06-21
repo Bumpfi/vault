@@ -55,9 +55,9 @@ function Watch() {
   return (
     <div>
       <AppHeader />
-      <main className="mx-auto max-w-7xl p-6">
-        <div className="flex flex-col gap-3 lg:flex-row">
-          <div className="aspect-video w-full flex-1 overflow-hidden rounded-lg border bg-black">
+      <main className="px-4 py-4">
+        <div className="flex flex-col gap-2 lg:flex-row lg:justify-center">
+          <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black lg:h-[calc(100vh-7rem)] lg:w-auto lg:max-w-full lg:flex-none">
             {data.isAvailable ? (
               <TwitchPlayer
                 ref={playerRef}
@@ -94,7 +94,7 @@ function Watch() {
             )}
           </div>
           {data.isAvailable && showChat ? (
-            <aside className="relative h-72 w-full overflow-hidden rounded-lg border bg-card lg:h-auto lg:w-[340px] lg:flex-none lg:self-stretch">
+            <aside className="relative h-72 w-full overflow-hidden rounded-lg border bg-card lg:h-auto lg:w-[360px] lg:flex-none lg:self-stretch">
               {/* absolute inner so chat content height never grows the row */}
               <div className="absolute inset-0">
                 <ChatReplay
