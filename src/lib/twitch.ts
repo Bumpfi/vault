@@ -45,7 +45,7 @@ export async function getAppToken(): Promise<string> {
   return appToken.token
 }
 
-export interface HelixPage<T> {
+interface HelixPage<T> {
   data: Array<T>
   pagination?: { cursor?: string }
 }
