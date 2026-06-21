@@ -56,8 +56,13 @@ function Watch() {
     <div>
       <AppHeader />
       <main className="px-4 py-4">
+        {/* Theater layout: player height is the smaller of viewport-height or the
+            height that keeps player+chat within viewport-width, so it never
+            overflows and stays the same size whether or not chat is shown.
+            ponytail: the 360px (chat width) + 2.5rem (px-4 padding + gap-2) are
+            coupled to the <aside> width and main padding below — keep in sync. */}
         <div className="flex flex-col gap-2 lg:flex-row lg:justify-center">
-          <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black lg:h-[calc(100vh-7rem)] lg:w-auto lg:max-w-full lg:flex-none">
+          <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black lg:h-[min(calc(100vh_-_7rem),calc((100vw_-_360px_-_2.5rem)_*_9_/_16))] lg:w-auto lg:flex-none">
             {data.isAvailable ? (
               <TwitchPlayer
                 ref={playerRef}
