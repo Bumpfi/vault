@@ -75,9 +75,18 @@ export const TwitchPlayer = forwardRef<
   // Drives the real-world clock overlay (re-renders ~1/s).
   const [seconds, setSeconds] = useState(initialPosition)
   const [syncing, setSyncing] = useState(false)
-  // Keep the latest onTime without re-running the player effect.
+  // Keep the latest values without re-running the player effect. The Twitch
+  // player must init exactly once per videoId — if these fed the effect's deps,
+  // a loader revalidation (focus/nav) that changed position/duration would tear
+  // down and recreate the iframe mid-watch, which looks like a random pause.
   const onTimeRef = useRef(onTime)
   onTimeRef.current = onTime
+  const vodIdRef = useRef(vodId)
+  vodIdRef.current = vodId
+  const durationRef = useRef(duration)
+  durationRef.current = duration
+  const initialPositionRef = useRef(initialPosition)
+  initialPositionRef.current = initialPosition
 
   const streamStartMs = streamStartedAt
     ? new Date(streamStartedAt).getTime()
@@ -101,9 +110,11 @@ export const TwitchPlayer = forwardRef<
       const p = playerRef.current
       if (!p) return
       const t = p.getCurrentTime()
-      const d = p.getDuration() || duration || 0
+      const d = p.getDuration() || durationRef.current || 0
       if (t > 0)
-        void saveProgress({ data: { vodId, position: t, duration: d } })
+        void saveProgress({
+          data: { vodId: vodIdRef.current, position: t, duration: d },
+        })
     }
 
     const init = () => {
@@ -117,7 +128,7 @@ export const TwitchPlayer = forwardRef<
       })
       playerRef.current = player
       player.addEventListener(window.Twitch.Player.READY, () => {
-        if (initialPosition > 0) player.seek(initialPosition)
+        if (initialPositionRef.current > 0) player.seek(initialPositionRef.current)
       })
       // Update the clock the instant the user seeks/plays/pauses, so it's
       // accurate immediately instead of waiting for the next 1s tick.
@@ -159,7 +170,7 @@ export const TwitchPlayer = forwardRef<
       persist() // save final position on unmount
       playerRef.current = null
     }
-  }, [videoId, vodId, initialPosition, duration])
+  }, [videoId])
 
   // Snap the clock to the exact current time on fullscreen / tab-visibility /
   // focus changes (so it's not stale for up to a second after). Native Twitch
