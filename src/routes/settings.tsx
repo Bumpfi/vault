@@ -11,6 +11,11 @@ import {
   setSubscribed,
 } from '#/server/streamers'
 import { getSettings, saveSettings } from '#/server/settings'
+import {
+  getAdminInfo,
+  removeUser,
+  setRegistrationEnabled,
+} from '#/server/admin'
 import { AppHeader } from '#/components/app-header'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -38,6 +43,21 @@ function Settings() {
   const settings = useQuery({
     queryKey: ['settings'],
     queryFn: () => getSettings(),
+  })
+  // Errors for non-admins; the Administration section simply stays hidden.
+  const admin = useQuery({
+    queryKey: ['admin'],
+    queryFn: () => getAdminInfo(),
+    retry: false,
+  })
+
+  const regMut = useMutation({
+    mutationFn: (enabled: boolean) => setRegistrationEnabled({ data: enabled }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
+  })
+  const removeUserMut = useMutation({
+    mutationFn: (userId: string) => removeUser({ data: userId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
   })
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['streamers'] })
@@ -191,6 +211,68 @@ function Settings() {
             </select>
           </div>
         </section>
+
+        {/* Administration (admins only — query errors for everyone else) */}
+        {admin.data ? (
+          <section className="mb-8 space-y-3">
+            <h2 className="text-lg font-semibold">Administration</h2>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <div className="font-medium">Open registration</div>
+                <div className="text-xs text-muted-foreground">
+                  Allow new users to sign up with their Twitch account. Each
+                  user gets their own subscriptions and watch progress.
+                </div>
+              </div>
+              <Switch
+                checked={admin.data.registrationEnabled}
+                onCheckedChange={(checked) => regMut.mutate(checked)}
+              />
+            </div>
+            <div className="space-y-2 rounded-md border p-3">
+              <div className="font-medium">Users</div>
+              {admin.data.users.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    {u.image ? (
+                      <img
+                        src={u.image}
+                        alt=""
+                        className="size-6 shrink-0 rounded-full"
+                      />
+                    ) : null}
+                    <span className="truncate text-sm">{u.name}</span>
+                    {u.role === 'admin' ? (
+                      <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        ADMIN
+                      </span>
+                    ) : null}
+                  </div>
+                  {u.id !== admin.data.adminId ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={removeUserMut.isPending}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Remove ${u.name} and all their data? This cannot be undone.`,
+                          )
+                        )
+                          removeUserMut.mutate(u.id)
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="mb-6 space-y-4">
           <h2 className="text-lg font-semibold">Streamers</h2>

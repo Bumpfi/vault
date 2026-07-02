@@ -83,10 +83,14 @@ docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit
 
 ## Access control
 
-- **Default (open signup):** `ALLOWED_TWITCH_USER_IDS` empty — anyone who can
-  reach it on your LAN and logs in with Twitch gets their own Vault.
-- **Restrict:** set `ALLOWED_TWITCH_USER_IDS=id1,id2,…` to allow only specific
-  Twitch accounts.
+- **First user = admin.** The first Twitch account to sign in becomes the
+  admin and can manage users and toggle registration in **Settings →
+  Administration**.
+- **Registration toggle (in-app):** admins can turn "Open registration" off to
+  block any new signups. Existing users always keep access.
+- **Optional env allowlist:** set `ALLOWED_TWITCH_USER_IDS=id1,id2,…` to
+  additionally restrict signups to specific Twitch accounts. Empty = no
+  allowlist.
 
 ---
 

@@ -66,8 +66,11 @@ troubleshooting) is in **[DEPLOY.md](DEPLOY.md)**.
 
 ## Usage
 
-1. **Sign in** with Twitch. Set `ALLOWED_TWITCH_USER_IDS` (comma-separated ids)
-   to restrict who can sign in, or leave it empty for open signup on your LAN.
+1. **Sign in** with Twitch — the first account becomes the **admin**, who can
+   enable/disable registration for further users and manage them in
+   **Settings → Administration**. (An optional `ALLOWED_TWITCH_USER_IDS`
+   allowlist additionally restricts signups.) The login page has a built-in
+   setup guide with your exact OAuth callback URL.
 2. **Settings → Import follows** to pull in the channels you follow, then toggle
    subscriptions and assign categories ("RP", "Variety", …).
 3. **Browse the feed** — filter by category, streamer, or "unwatched only";

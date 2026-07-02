@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchSession } from '#/lib/session'
 import { listContinueWatching, listVods, refreshVods } from '#/server/vods'
 import { getSettings } from '#/server/settings'
-import { listLiveStreamerIds } from '#/server/streamers'
+import { listLiveStatus } from '#/server/streamers'
 import { AppHeader } from '#/components/app-header'
 import { VodCard } from '#/components/vod-card'
 import { Button } from '#/components/ui/button'
@@ -39,10 +39,19 @@ function Home() {
   })
   const liveQuery = useQuery({
     queryKey: ['live-streamers'],
-    queryFn: () => listLiveStreamerIds(),
+    queryFn: () => listLiveStatus(),
     refetchInterval: 60_000,
   })
-  const live = useMemo(() => new Set(liveQuery.data ?? []), [liveQuery.data])
+  // Streamer-level (filter buttons) vs stream-level (per-VOD badge — only the
+  // VOD currently being recorded is live, not the streamer's whole backlog).
+  const live = useMemo(
+    () => new Set(liveQuery.data?.streamerIds ?? []),
+    [liveQuery.data],
+  )
+  const liveStreams = useMemo(
+    () => new Set(liveQuery.data?.streamIds ?? []),
+    [liveQuery.data],
+  )
 
   // Apply saved dashboard defaults once, without clobbering later user changes.
   const appliedDefaults = useRef(false)
@@ -104,7 +113,7 @@ function Home() {
             <div className="flex gap-5 overflow-x-auto pb-2">
               {continueWatching.data.map((v) => (
                 <div key={v.id} className="w-64 shrink-0">
-                  <VodCard vod={v} live={live.has(v.streamerId)} />
+                  <VodCard vod={v} live={!!v.streamId && liveStreams.has(v.streamId)} />
                 </div>
               ))}
             </div>
@@ -201,7 +210,11 @@ function Home() {
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
             {filtered.map((v) => (
-              <VodCard key={v.id} vod={v} live={live.has(v.streamerId)} />
+              <VodCard
+                key={v.id}
+                vod={v}
+                live={!!v.streamId && liveStreams.has(v.streamId)}
+              />
             ))}
           </div>
         )}

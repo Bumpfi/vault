@@ -8,7 +8,7 @@ import {
   getAppToken,
   getCurrentUser,
   getFollowedChannels,
-  getLiveUserIds,
+  getLiveStreams,
   getUserByLogin,
   getUsersByIds,
 } from '#/lib/twitch'
@@ -142,13 +142,19 @@ export const setSubscribed = createServerFn({ method: 'POST' })
     return { ok: true }
   })
 
-// db ids of the user's subscribed streamers that are live right now.
-export const listLiveStreamerIds = createServerFn({ method: 'GET' }).handler(
+// Live status for the user's subscribed streamers: streamer db ids (for the
+// filter buttons) + live stream ids (a VOD is "live" only if its stream_id is
+// the stream currently being recorded).
+export const listLiveStatus = createServerFn({ method: 'GET' }).handler(
   async () => {
     const { headers } = getRequest()
     const session = await auth.api.getSession({ headers })
     if (!session) throw new Error('Unauthorized')
 
+    const empty = {
+      streamerIds: [] as Array<number>,
+      streamIds: [] as Array<string>,
+    }
     const subs = await db
       .select({ id: streamer.id, twitchUserId: streamer.twitchUserId })
       .from(streamer)
@@ -159,14 +165,20 @@ export const listLiveStreamerIds = createServerFn({ method: 'GET' }).handler(
           eq(subscription.userId, session.user.id),
         ),
       )
-    if (subs.length === 0) return [] as Array<number>
+    if (subs.length === 0) return empty
 
     const token = await getAppToken()
-    const live = await getLiveUserIds(
+    const live = await getLiveStreams(
       token,
       subs.map((s) => s.twitchUserId),
     )
-    return subs.filter((s) => live.has(s.twitchUserId)).map((s) => s.id)
+    const liveUserIds = new Set(live.map((s) => s.user_id))
+    return {
+      streamerIds: subs
+        .filter((s) => liveUserIds.has(s.twitchUserId))
+        .map((s) => s.id),
+      streamIds: live.map((s) => s.id),
+    }
   },
 )
 

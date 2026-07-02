@@ -56,24 +56,29 @@ async function probe(login: string, streamId: string, baseTs: number) {
   return null
 }
 
+/** CDN playlist URL for a VOD (works for available + recently-deleted VODs).
+ * Shared by recovery and the download route. Null if not found. */
+export async function findPlaylistUrl(vodId: number): Promise<string | null> {
+  const row = (
+    await db
+      .select({
+        streamId: vod.streamId,
+        createdAt: vod.createdAtTwitch,
+        login: streamer.login,
+      })
+      .from(vod)
+      .innerJoin(streamer, eq(streamer.id, vod.streamerId))
+      .where(eq(vod.id, vodId))
+      .limit(1)
+  )[0]
+  if (!row?.streamId || !row.createdAt) return null
+  const baseTs = Math.floor(new Date(row.createdAt).getTime() / 1000)
+  return probe(row.login, row.streamId, baseTs)
+}
+
 export const recoverVod = createServerFn({ method: 'POST' })
   .validator((vodId: number) => vodId)
   .handler(async ({ data: vodId }) => {
     await requireUserId()
-    const row = (
-      await db
-        .select({
-          streamId: vod.streamId,
-          createdAt: vod.createdAtTwitch,
-          login: streamer.login,
-        })
-        .from(vod)
-        .innerJoin(streamer, eq(streamer.id, vod.streamerId))
-        .where(eq(vod.id, vodId))
-        .limit(1)
-    )[0]
-    if (!row?.streamId || !row.createdAt) return { url: null as string | null }
-    const baseTs = Math.floor(new Date(row.createdAt).getTime() / 1000)
-    const url = await probe(row.login, row.streamId, baseTs)
-    return { url }
+    return { url: await findPlaylistUrl(vodId) }
   })

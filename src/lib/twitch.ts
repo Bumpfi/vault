@@ -183,22 +183,23 @@ export async function getExistingVideoIds(
 }
 
 interface TwitchStream {
+  id: string // stream id — matches vod.stream_id of the archive being recorded
   user_id: string
 }
 
-/** Of the given broadcaster ids, which are live right now (app token). */
-export async function getLiveUserIds(
+/** Live streams among the given broadcaster ids (app token). */
+export async function getLiveStreams(
   token: string,
   userIds: Array<string>,
-): Promise<Set<string>> {
-  const live = new Set<string>()
+): Promise<Array<TwitchStream>> {
+  const live: Array<TwitchStream> = []
   for (let i = 0; i < userIds.length; i += 100) {
     const batch = userIds.slice(i, i + 100)
     const { data } = await helixGet<TwitchStream>('/streams', token, {
       user_id: batch,
       first: '100',
     })
-    for (const s of data) live.add(s.user_id)
+    live.push(...data)
   }
   return live
 }

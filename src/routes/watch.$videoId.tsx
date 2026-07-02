@@ -1,5 +1,6 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
+import { Download } from 'lucide-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { fetchSession } from '#/lib/session'
 import { getWatchData, setWatched } from '#/server/progress'
@@ -126,6 +127,13 @@ function Watch() {
               <Link to="/split" search={{ a: data.twitchVideoId }}>
                 Split view
               </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              {/* Streams the VOD as one .ts file (plays in VLC/mpv). */}
+              <a href={`/api/download/${data.id}`} download>
+                <Download className="size-4" />
+                Download
+              </a>
             </Button>
             <Button
               variant={watched ? 'default' : 'outline'}

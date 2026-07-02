@@ -43,6 +43,8 @@ export function VodCard({ vod, live }: { vod: FeedVod; live?: boolean }) {
             <img
               src={thumb}
               alt=""
+              loading="lazy"
+              decoding="async"
               className={cn(
                 'size-full object-cover transition-transform group-hover:scale-105',
                 (vod.watched || !vod.isAvailable) && 'opacity-[0.32]',
@@ -62,6 +64,8 @@ export function VodCard({ vod, live }: { vod: FeedVod; live?: boolean }) {
                 <img
                   src={vod.profileImageUrl}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="size-16 rounded-full object-cover opacity-90 transition-all duration-300 [filter:grayscale(0.6)] group-hover:opacity-100 group-hover:[filter:grayscale(0)]"
                 />
               ) : (
@@ -103,6 +107,8 @@ export function VodCard({ vod, live }: { vod: FeedVod; live?: boolean }) {
             <img
               src={vod.profileImageUrl}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="mt-0.5 size-8 shrink-0 rounded-full"
             />
           ) : null}

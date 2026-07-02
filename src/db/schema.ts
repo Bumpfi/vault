@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   pgTable,
   serial,
@@ -18,40 +19,50 @@ export const user = pgTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
+  // 'admin' | 'user'. The first user to sign up becomes admin (see lib/auth.ts).
+  role: text('role').notNull().default('user'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
-export const session = pgTable('session', {
-  id: text('id').primaryKey(),
-  expiresAt: timestamp('expires_at').notNull(),
-  token: text('token').notNull().unique(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  ipAddress: text('ip_address'),
-  userAgent: text('user_agent'),
-  userId: text('user_id')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-})
+export const session = pgTable(
+  'session',
+  {
+    id: text('id').primaryKey(),
+    expiresAt: timestamp('expires_at').notNull(),
+    token: text('token').notNull().unique(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+  },
+  (t) => [index('session_user_id_idx').on(t.userId)],
+)
 
-export const account = pgTable('account', {
-  id: text('id').primaryKey(),
-  accountId: text('account_id').notNull(),
-  providerId: text('provider_id').notNull(),
-  userId: text('user_id')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  accessToken: text('access_token'),
-  refreshToken: text('refresh_token'),
-  idToken: text('id_token'),
-  accessTokenExpiresAt: timestamp('access_token_expires_at'),
-  refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
-  scope: text('scope'),
-  password: text('password'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+export const account = pgTable(
+  'account',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id').notNull(),
+    providerId: text('provider_id').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    accessToken: text('access_token'),
+    refreshToken: text('refresh_token'),
+    idToken: text('id_token'),
+    accessTokenExpiresAt: timestamp('access_token_expires_at'),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
+    scope: text('scope'),
+    password: text('password'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('account_user_id_idx').on(t.userId)],
+)
 
 export const verification = pgTable('verification', {
   id: text('id').primaryKey(),
@@ -63,6 +74,12 @@ export const verification = pgTable('verification', {
 })
 
 // ── App tables ───────────────────────────────────────────────────────
+
+// Instance-wide settings, single row (id always 1). Admin-editable in the UI.
+export const appSetting = pgTable('app_setting', {
+  id: integer('id').primaryKey(),
+  registrationEnabled: boolean('registration_enabled').notNull().default(true),
+})
 
 export const streamer = pgTable('streamer', {
   id: serial('id').primaryKey(),
@@ -94,7 +111,11 @@ export const subscription = pgTable(
     category: text('category'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
-  (t) => [unique('subscription_user_streamer_unq').on(t.userId, t.streamerId)],
+  (t) => [
+    unique('subscription_user_streamer_unq').on(t.userId, t.streamerId),
+    // Feed + poll-vods join by streamer; the unique above only covers userId-first.
+    index('subscription_streamer_id_idx').on(t.streamerId),
+  ],
 )
 
 export type Subscription = typeof subscription.$inferSelect
@@ -113,26 +134,34 @@ export const userSetting = pgTable('user_setting', {
 
 export type UserSetting = typeof userSetting.$inferSelect
 
-export const vod = pgTable('vod', {
-  id: serial('id').primaryKey(),
-  twitchVideoId: text('twitch_video_id').notNull().unique(),
-  streamerId: integer('streamer_id')
-    .notNull()
-    .references(() => streamer.id, { onDelete: 'cascade' }),
-  title: text('title').notNull(),
-  description: text('description'),
-  url: text('url').notNull(),
-  // Stored with %{width}x%{height} placeholders; substitute when rendering.
-  thumbnailUrl: text('thumbnail_url'),
-  streamId: text('stream_id'),
-  createdAtTwitch: timestamp('created_at_twitch'),
-  publishedAt: timestamp('published_at'),
-  durationSeconds: integer('duration_seconds'),
-  type: text('type').notNull().default('archive'),
-  estimatedExpiryAt: timestamp('estimated_expiry_at'), // Phase 6
-  firstSeenAt: timestamp('first_seen_at').notNull().defaultNow(),
-  isAvailable: boolean('is_available').notNull().default(true),
-})
+export const vod = pgTable(
+  'vod',
+  {
+    id: serial('id').primaryKey(),
+    twitchVideoId: text('twitch_video_id').notNull().unique(),
+    streamerId: integer('streamer_id')
+      .notNull()
+      .references(() => streamer.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    url: text('url').notNull(),
+    // Stored with %{width}x%{height} placeholders; substitute when rendering.
+    thumbnailUrl: text('thumbnail_url'),
+    streamId: text('stream_id'),
+    createdAtTwitch: timestamp('created_at_twitch'),
+    publishedAt: timestamp('published_at'),
+    durationSeconds: integer('duration_seconds'),
+    type: text('type').notNull().default('archive'),
+    estimatedExpiryAt: timestamp('estimated_expiry_at'), // Phase 6
+    firstSeenAt: timestamp('first_seen_at').notNull().defaultNow(),
+    isAvailable: boolean('is_available').notNull().default(true),
+  },
+  (t) => [
+    // Feed: join on streamer_id, ORDER BY published_at DESC.
+    index('vod_streamer_id_idx').on(t.streamerId),
+    index('vod_published_at_idx').on(t.publishedAt),
+  ],
+)
 
 export type Vod = typeof vod.$inferSelect
 

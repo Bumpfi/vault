@@ -153,6 +153,8 @@ export function ChatReplay({
                     src={emoteUrl(f.emoteId)}
                     alt={f.text}
                     title={f.text}
+                    loading="lazy"
+                    decoding="async"
                     className="mx-0.5 inline-block h-5 rounded-sm bg-primary/10 align-middle"
                   />
                 ) : (

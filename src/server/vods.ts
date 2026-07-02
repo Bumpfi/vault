@@ -14,6 +14,7 @@ const feedColumns = {
   durationSeconds: vod.durationSeconds,
   watched: watchProgress.watched,
   streamerId: vod.streamerId,
+  streamId: vod.streamId,
   streamerName: streamer.displayName,
   profileImageUrl: streamer.profileImageUrl,
   category: subscription.category,

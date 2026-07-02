@@ -14,6 +14,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WatchVideoIdRouteImport } from './routes/watch.$videoId'
+import { Route as ApiDownloadVodIdRouteImport } from './routes/api/download.$vodId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const SplitRoute = SplitRouteImport.update({
@@ -41,6 +42,11 @@ const WatchVideoIdRoute = WatchVideoIdRouteImport.update({
   path: '/watch/$videoId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDownloadVodIdRoute = ApiDownloadVodIdRouteImport.update({
+  id: '/api/download/$vodId',
+  path: '/api/download/$vodId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/split': typeof SplitRoute
   '/watch/$videoId': typeof WatchVideoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/download/$vodId': typeof ApiDownloadVodIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/split': typeof SplitRoute
   '/watch/$videoId': typeof WatchVideoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/download/$vodId': typeof ApiDownloadVodIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/split': typeof SplitRoute
   '/watch/$videoId': typeof WatchVideoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/download/$vodId': typeof ApiDownloadVodIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/split'
     | '/watch/$videoId'
     | '/api/auth/$'
+    | '/api/download/$vodId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/split'
     | '/watch/$videoId'
     | '/api/auth/$'
+    | '/api/download/$vodId'
   id:
     | '__root__'
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/split'
     | '/watch/$videoId'
     | '/api/auth/$'
+    | '/api/download/$vodId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +118,7 @@ export interface RootRouteChildren {
   SplitRoute: typeof SplitRoute
   WatchVideoIdRoute: typeof WatchVideoIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiDownloadVodIdRoute: typeof ApiDownloadVodIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WatchVideoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/download/$vodId': {
+      id: '/api/download/$vodId'
+      path: '/api/download/$vodId'
+      fullPath: '/api/download/$vodId'
+      preLoaderRoute: typeof ApiDownloadVodIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   SplitRoute: SplitRoute,
   WatchVideoIdRoute: WatchVideoIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiDownloadVodIdRoute: ApiDownloadVodIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
