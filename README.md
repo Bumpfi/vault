@@ -5,7 +5,7 @@ you follow, browse their past broadcasts, and watch them with resume, watched
 state, synced chat replay, split-view, and a real-world clock. Runs entirely on
 your own hardware; private to your LAN.
 
-**Website:** [vault.example.com](https://vault.felixkargl.dev)
+**Website:** [vault.felixkargl.dev](https://vault.felixkargl.dev)
 
 ---
 
