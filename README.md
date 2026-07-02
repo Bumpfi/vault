@@ -5,6 +5,8 @@ you follow, browse their past broadcasts, and watch them with resume, watched
 state, synced chat replay, split-view, and a real-world clock. Runs entirely on
 your own hardware; private to your LAN.
 
+**Website:** [vault.example.com](https://vault.example.com) <!-- TODO: replace with your landing-page URL -->
+
 ---
 
 ## Motivation
@@ -22,18 +24,24 @@ private Netflix for your Twitch follows.
 **Features**
 
 - **Personal feed** — VODs from your subscribed streamers, with watched badges,
-  resume progress bars, and "age" stamps.
+  resume progress bars, live indicators, and "age" stamps.
 - **Multi-user** — everyone logs in with their own Twitch account and gets their
-  own follows, watched state, and progress (shared streamer/VOD catalog).
-- **Player** — embedded Twitch player with resume, auto-mark-watched at 90%, and
-  a continue-watching row.
+  own follows, watched state, and progress (shared streamer/VOD catalog). The
+  first user becomes **admin** and controls registration + users in-app.
+- **Player & theater mode** — embedded Twitch player with resume,
+  auto-mark-watched at 90%, a continue-watching row, and a layout that fills
+  the screen without fullscreen.
 - **Real-world clock** — overlay showing the actual time of day a moment aired.
 - **Synced chat replay** — original stream chat scrolls in time with playback.
 - **Game chapters** — jump to each game played during a stream.
 - **Split view** — two players side by side, with one-click sync to the same
   real-world moment (great for multi-POV roleplay).
-- **Live indicator**, **categories** + filters, **mark-older-watched**, and
-  **deleted detection + best-effort recovery**.
+- **One-click download** — save a VOD to your computer as a single playable
+  `.ts` file, streamed straight from Twitch's CDN.
+- **Deleted detection + best-effort recovery** — deleted VODs are flagged, and
+  recently-deleted ones can often still be played back.
+- **Categories + filters**, **mark-older-watched**, **dark & light themes**
+  saved per account.
 
 **Tech stack:** TanStack Start (React, SSR) · PostgreSQL + Drizzle ORM ·
 Better Auth (Twitch OAuth) · shadcn/ui + Tailwind v4 · BullMQ + Redis · pnpm ·
@@ -79,8 +87,10 @@ troubleshooting) is in **[DEPLOY.md](DEPLOY.md)**.
    clock, and game-chapter jump points.
 5. **Split view** — open a VOD → *Split view* → pick a second one → *sync* both
    to the same real-world moment.
+6. **Download** — on any VOD's watch page, *Download* saves it to your machine
+   as a single `.ts` file (plays in VLC/mpv).
 
-VOD polling, availability checks, and token refresh run automatically in the
+VOD polling (every 15 min) and availability checks run automatically in the
 background worker.
 
 ---
@@ -138,13 +148,21 @@ against the `main` branch.
 
 ## Known limitations
 
-- Chat replay, game chapters, and deleted-VOD recovery use Twitch's
-  **unofficial** endpoints — undocumented and may break if Twitch changes them
-  (the app degrades gracefully).
+- Chat replay, game chapters, deleted-VOD recovery, and downloads use Twitch's
+  **unofficial** endpoints/CDN paths — undocumented and may break if Twitch
+  changes them (the app degrades gracefully).
 - Deleted VODs are only recoverable for a short window while their segments
   remain on Twitch's CDN; recovered VODs play in a basic HLS player without chat.
 
+## Legal
+
+Vault is an independent project, **not affiliated with or endorsed by Twitch**.
+It uses the official Twitch API where possible; some features (chat replay,
+recovery, downloads) rely on unofficial endpoints and may conflict with
+Twitch's Terms of Service — use them at your own discretion, for personal use.
+Downloaded VODs are the copyright of their creators/Twitch: keep them private,
+don't re-upload or redistribute.
+
 ## License
 
-Personal project — use at your own discretion and within Twitch's Terms of
-Service.
+[MIT](LICENSE)
