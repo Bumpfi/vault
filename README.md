@@ -62,7 +62,7 @@ hostname for the box (e.g. `vault.home`).
 git clone https://github.com/Bumpfi/vault.git && cd vault
 cp .env.production.example .env      # fill Twitch creds, a secret, your host
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force
+docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts
 docker compose -f docker-compose.prod.yml restart worker
 ```
 

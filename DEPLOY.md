@@ -59,7 +59,7 @@ cp .env.production.example .env
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 
 # 4. Create the database schema (one time, first deploy only)
-docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force
+docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts
 
 # 5. Restart the worker so it polls now (on first boot it starts before step 4
 #    and logs one harmless "relation does not exist" error — this clears it)
@@ -76,7 +76,7 @@ URL and log in with their own Twitch — each gets their own feed.
 git pull
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 # if the schema changed:
-docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force
+docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts
 ```
 
 ---
