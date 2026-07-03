@@ -45,7 +45,7 @@ services:
   worker:
     image: vault:latest # reuses the image built by `web`
     restart: unless-stopped
-    command: node worker/index.ts
+    command: sh -c "node_modules/.bin/tsx worker/index.ts"
     env_file: .env
     depends_on:
       postgres:
