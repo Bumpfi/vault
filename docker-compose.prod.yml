@@ -33,9 +33,6 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
-    environment:
-      NITRO_HOST: 0.0.0.0
-      NITRO_PORT: 3000
     expose:
       - '3000'
     command: node .output/server/index.mjs

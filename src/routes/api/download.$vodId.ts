@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { auth } from '#/lib/auth'
 import { db } from '#/db'
 import { vod } from '#/db/schema'
-import { findPlaylistUrl } from '#/server/recovery'
+import { findPlaylistUrl } from '#/lib/vod-cdn'
 
 // One-click VOD download: resolve the CDN HLS playlist, then stream all
 // MPEG-TS segments concatenated as a single .ts file (raw TS segments are
