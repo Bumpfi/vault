@@ -35,34 +35,22 @@ services:
     env_file: .env
     expose:
       - '3000'
-    command: node .output/server/index.mjs
+    command: sh -c "node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts && node .output/server/index.mjs"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
 
   worker:
     image: vault:latest # reuses the image built by `web`
     restart: unless-stopped
-    command: sh -c "node_modules/.bin/tsx worker/index.ts"
+    command: sh -c "node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts && node_modules/.bin/tsx worker/index.ts"
     env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-
-  migrate:
-    image: vault:latest
-    env_file: .env
-    command: sh -c "npx drizzle-kit push --force --config drizzle.config.ts"
-    depends_on:
-      postgres:
         condition: service_healthy
 
   # HTTPS reverse proxy (self-signed cert via Caddy's internal CA) so Twitch
