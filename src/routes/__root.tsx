@@ -46,9 +46,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" className="dark">
       <head>
         <script
-          // Default dark; switch to light before paint if the user chose it.
+          // Default dark (noir). Before paint, apply the saved theme: light
+          // drops the dark class; dracula/catppuccin/rain set data-theme.
+          // Mirrors applyTheme() in lib/theme.ts.
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.theme==='light')document.documentElement.classList.remove('dark')}catch(e){}`,
+            __html: `try{var t=localStorage.theme;if(t==='light')document.documentElement.classList.remove('dark');else if(t&&t!=='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}`,
           }}
         />
         <HeadContent />
