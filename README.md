@@ -51,12 +51,15 @@ Docker + Caddy.
 
 ## Quick Start
 
-Run Vault on a home server (e.g. unraid), reachable over your LAN. Twitch OAuth
-requires HTTPS off-localhost, so a bundled Caddy proxy serves it over HTTPS.
+**Everyone needs:** a free [Twitch application](https://dev.twitch.tv/console)
+(Client ID + Secret) with the OAuth redirect URL
+`https://<your-host>/api/auth/callback/twitch`. The login page shows your
+exact URL. Then pick where you're running Vault:
 
-**You need:** Docker + Docker Compose, a
-[Twitch application](https://dev.twitch.tv/console) (Client ID + Secret), and a
-hostname for the box (e.g. `vault.home`).
+### Option A — Home server / LAN (unraid, NAS, spare box)
+
+Private to your network. A bundled Caddy serves HTTPS with a self-signed cert
+(Twitch OAuth requires https off-localhost).
 
 ```bash
 git clone https://github.com/Bumpfi/vault.git && cd vault
@@ -66,8 +69,22 @@ docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit
 docker compose -f docker-compose.prod.yml restart worker
 ```
 
-Open `https://<your-host>`, accept the self-signed certificate, and sign in with
-Twitch. Full step-by-step (hostname/DNS, Twitch redirect URL, updates,
+Open `https://<your-host>`, accept the certificate warning, sign in.
+
+### Option B — Public VPS with Coolify
+
+Real HTTPS via Coolify's proxy — use **`docker-compose.coolify.yml`** (no
+bundled Caddy, env via Coolify's UI). New resource → Docker Compose → set the
+compose location, put your domain on the **web** service as
+`https://app.yourdomain.com:3000`, fill the env vars, deploy. Full
+click-by-click in **[DEPLOY.md](DEPLOY.md)**.
+
+### Option C — Local development
+
+No Docker stack needed beyond Postgres/Redis — see
+[Contributing](#-contributing) below.
+
+Full step-by-step for every path (DNS, Twitch redirect URL, updates, 502
 troubleshooting) is in **[DEPLOY.md](DEPLOY.md)**.
 
 ---

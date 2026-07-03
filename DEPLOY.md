@@ -1,8 +1,20 @@
-# Deploying Vault (self-hosted, LAN-only)
+# Deploying Vault
 
 Vault runs as one Docker stack: **web** (the app), **worker** (background
-polling), **postgres**, **redis**, and **caddy** (HTTPS reverse proxy). It's
-reachable only on your local network — nothing is exposed to the internet.
+polling), **postgres**, and **redis**.
+
+## Choose your path
+
+| Where | Compose file | HTTPS by | Guide |
+|---|---|---|---|
+| **Home server / LAN** (unraid, NAS, spare box) | `docker-compose.prod.yml` | bundled **Caddy**, self-signed cert | [below](#deploy-home-server--lan) |
+| **Public VPS with Coolify** | `docker-compose.coolify.yml` | Coolify's proxy, real Let's Encrypt cert | [below](#deploying-with-coolify-public-vps) |
+| **Local development** | none — `pnpm dev` | not needed (Twitch allows `http://localhost`) | [README → Contributing](README.md#-contributing) |
+
+Other reverse proxies (Traefik, Nginx Proxy Manager, plain nginx): use
+`docker-compose.coolify.yml` as the base — no bundled proxy — and point yours
+at the `web` service on port `3000`; provide the same env vars through your
+tooling.
 
 ## Why HTTPS (and a cert warning)
 
@@ -40,9 +52,10 @@ Only environment + how it's run. No code changes.
 
 ---
 
-## Deploy
+## Deploy (home server / LAN)
 
-On unraid use the **Compose Manager** plugin (paste the repo / compose), or a
+Reachable only on your local network — nothing exposed to the internet. On
+unraid use the **Compose Manager** plugin (paste the repo / compose), or a
 terminal:
 
 ```bash
@@ -76,13 +89,22 @@ Use **`docker-compose.coolify.yml`** instead — it drops the bundled Caddy
 (Coolify's own proxy terminates HTTPS with a real certificate) and reads env
 from Coolify instead of a `.env` file:
 
-1. Resource → your app → **Build → Docker Compose Location**: `/docker-compose.coolify.yml`, then *Reload Compose File*.
-2. **Domains**: set one only on the **web** service, e.g. `https://app.yourdomain.com` (leave worker/postgres/redis without domains).
-3. **Environment Variables**: set everything listed at the top of `docker-compose.coolify.yml` (Twitch creds, `BETTER_AUTH_SECRET`, `DATABASE_URL` with the postgres password, URLs pointing at your domain).
-4. Add `https://app.yourdomain.com/api/auth/callback/twitch` as an OAuth redirect in the Twitch console.
-5. Deploy. Then create the schema once via the **web** container's terminal in Coolify:
+1. Project → **+ New → Git repository**, pick the repo, Build Pack **Docker Compose**.
+2. **Build → Docker Compose Location**: `/docker-compose.coolify.yml`, then *Reload Compose File*.
+3. **Domains**: on the **web** service only, with the container port appended:
+   `https://app.yourdomain.com:3000` (the `:3000` tells Coolify's proxy which
+   container port to forward to — visitors still use normal 443). Leave
+   worker/postgres/redis without domains — the worker has no HTTP server.
+4. **Environment Variables**: set everything listed at the top of `docker-compose.coolify.yml` (Twitch creds, `BETTER_AUTH_SECRET`, `DATABASE_URL` with the postgres password, URLs pointing at your domain).
+5. Add `https://app.yourdomain.com/api/auth/callback/twitch` as an OAuth redirect in the Twitch console.
+6. Deploy. Then create the schema once via the **web** container's terminal in Coolify:
    `node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts` and restart the worker.
-6. **Sign in immediately** — the first account becomes admin — and if the instance is public, consider turning **Open registration off** in Settings → Administration.
+7. **Sign in immediately** — the first account becomes admin — and since the instance is public, consider turning **Open registration off** in Settings → Administration (or set `ALLOWED_TWITCH_USER_IDS`).
+
+**502 Bad Gateway checklist:** web container logs show a crash (missing env
+var)? Domain missing the `:3000` port suffix? Compose Location still pointing
+at `docker-compose.prod.yml` (its bundled Caddy conflicts with Coolify's
+proxy)? Build still running/failed in the Deployments tab?
 
 ### Updating later
 

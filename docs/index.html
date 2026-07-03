@@ -93,6 +93,24 @@
       padding: 1px 5px;
     }
 
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 12px;
+      cursor: pointer;
+      margin-bottom: -1px;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--text); border-bottom-color: var(--primary); }
+    .tab-panel p { color: var(--muted); font-size: 15px; margin-bottom: 8px; }
+    .tab-panel pre { margin-top: 12px; }
+
     .stack-list { color: var(--muted); font-size: 15px; }
     .stack-list b { color: var(--text); font-weight: 600; }
 
@@ -172,33 +190,65 @@
   <section id="quick-start">
     <div class="container">
       <h2>Quick start</h2>
-      <ol class="steps">
-        <li>
-          <h3>Clone and configure</h3>
-          <p>You need Docker and a free Twitch application (two values in an env file).</p>
-          <pre><code>git clone https://github.com/Bumpfi/vault.git
-cd vault
-cp .env.production.example .env</code></pre>
-        </li>
-        <li>
-          <h3>Create a Twitch app</h3>
-          <p>
-            At <a href="https://dev.twitch.tv/console/apps" style="color: var(--primary)">dev.twitch.tv/console/apps</a>,
-            create an app (category: Website Integration) with the OAuth redirect URL
-            <code>https://&lt;your-host&gt;/api/auth/callback/twitch</code>.
-            Put its Client ID and Secret into <code>.env</code>.
-          </p>
-        </li>
-        <li>
-          <h3>Start it</h3>
-          <pre><code>docker compose -f docker-compose.prod.yml --env-file .env up -d --build</code></pre>
-          <p>
-            Sign in with Twitch — the first account becomes admin. Import your
-            follows in Settings, and the worker takes it from there. The login
-            page repeats these steps with your exact callback URL.
-          </p>
-        </li>
-      </ol>
+      <p style="color: var(--muted); margin-bottom: 20px;">
+        Every setup needs a free Twitch application from
+        <a href="https://dev.twitch.tv/console/apps" style="color: var(--primary)">dev.twitch.tv/console/apps</a>
+        (category: Website Integration) with the OAuth redirect URL
+        <code>https://&lt;your-host&gt;/api/auth/callback/twitch</code> — the
+        login page shows your exact URL. Then pick where you're deploying:
+      </p>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="lan">Home server / LAN</button>
+        <button class="tab" data-tab="coolify">VPS with Coolify</button>
+        <button class="tab" data-tab="dev">Local development</button>
+      </div>
+
+      <div class="tab-panel" data-panel="lan">
+        <p>For unraid, a NAS, or any box on your network. Private to your LAN;
+        a bundled Caddy serves HTTPS with a self-signed certificate (Twitch
+        OAuth requires https off-localhost — accept the warning once per
+        device).</p>
+        <pre><code>git clone https://github.com/Bumpfi/vault.git &amp;&amp; cd vault
+cp .env.production.example .env    # fill Twitch creds, a secret, your host
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+docker compose -f docker-compose.prod.yml exec web \
+  node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts
+docker compose -f docker-compose.prod.yml restart worker</code></pre>
+        <p>Open <code>https://&lt;your-host&gt;</code> (e.g.
+        <code>vault.home</code> — point it at the box in your router/Pi-hole
+        DNS) and sign in.</p>
+      </div>
+
+      <div class="tab-panel" data-panel="coolify" hidden>
+        <p>For a public VPS managed by Coolify — its proxy terminates HTTPS
+        with a real Let's Encrypt certificate, so there's no bundled Caddy.</p>
+        <ol class="steps">
+          <li><p>New resource → <b>Git repository</b> → Build Pack <b>Docker Compose</b>, compose location <code>/docker-compose.coolify.yml</code>.</p></li>
+          <li><p>Domain on the <b>web</b> service only, with the container port: <code>https://app.yourdomain.com:3000</code>. Leave the worker without a domain.</p></li>
+          <li><p>Fill the environment variables listed at the top of <code>docker-compose.coolify.yml</code> (Twitch creds, secrets, your domain), then deploy.</p></li>
+          <li><p>Once, in the web container's terminal: <code>node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts</code>, then restart the worker.</p></li>
+          <li><p>Sign in immediately — the first account becomes admin. On a public instance, consider turning off open registration in Settings.</p></li>
+        </ol>
+      </div>
+
+      <div class="tab-panel" data-panel="dev" hidden>
+        <p>For hacking on Vault itself. Twitch allows plain
+        <code>http://localhost</code>, so no HTTPS setup is needed.</p>
+        <pre><code>git clone https://github.com/Bumpfi/vault.git &amp;&amp; cd vault
+pnpm install
+docker compose up -d               # local Postgres + Redis
+cp .env.example .env.local         # fill Twitch creds + a secret
+pnpm db:push
+pnpm dev                           # web app on http://localhost:3000
+pnpm worker                        # background jobs (second terminal)</code></pre>
+      </div>
+
+      <p style="color: var(--muted); margin-top: 20px;">
+        Full step-by-step for every path — DNS, Twitch redirect URLs, updates,
+        troubleshooting — lives in
+        <a href="https://github.com/Bumpfi/vault/blob/main/DEPLOY.md" style="color: var(--primary)">DEPLOY.md</a>.
+      </p>
     </div>
   </section>
 
@@ -221,6 +271,20 @@ cp .env.production.example .env</code></pre>
       <a href="https://github.com/Bumpfi/vault">github.com/Bumpfi/vault</a>
     </div>
   </footer>
+
+  <script>
+    // Deploy-guide tabs.
+    document.querySelectorAll('.tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.tab').forEach(function (b) {
+          b.classList.toggle('active', b === btn)
+        })
+        document.querySelectorAll('.tab-panel').forEach(function (p) {
+          p.hidden = p.dataset.panel !== btn.dataset.tab
+        })
+      })
+    })
+  </script>
 
   <!-- Swetrix analytics (self-hosted) -->
   <script src="https://swetrix.org/swetrix.js" defer></script>
