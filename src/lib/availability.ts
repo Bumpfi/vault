@@ -1,7 +1,7 @@
 import { eq, inArray } from 'drizzle-orm'
-import { db } from '#/db'
-import { vod } from '#/db/schema'
-import { getAppToken, getExistingVideoIds } from '#/lib/twitch'
+import { db } from '../db/index.ts'
+import { vod } from '../db/schema.ts'
+import { getAppToken, getExistingVideoIds } from './twitch.ts'
 
 // Check whether currently-available VODs still exist on Twitch; mark the gone
 // ones unavailable (deleted/expired). Shared by the worker + manual refresh.

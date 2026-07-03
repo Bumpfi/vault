@@ -1,7 +1,7 @@
 import { Queue, Worker } from 'bullmq'
 import IORedis from 'ioredis'
-import { pollVods } from '#/lib/poll-vods.ts'
-import { checkAvailability } from '#/lib/availability.ts'
+import { pollVods } from '../src/lib/poll-vods.ts'
+import { checkAvailability } from '../src/lib/availability.ts'
 
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379'
 const QUEUE = 'vault'

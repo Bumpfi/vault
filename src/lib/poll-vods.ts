@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
-import { db } from '#/db'
-import { streamer, subscription, vod } from '#/db/schema'
-import { getAppToken, getArchiveVideos, parseDuration } from '#/lib/twitch'
+import { db } from '../db/index.ts'
+import { streamer, subscription, vod } from '../db/schema.ts'
+import { getAppToken, getArchiveVideos, parseDuration } from './twitch.ts'
 
 // Poll every streamer that at least one user subscribes to, and upsert their
 // latest archive VODs. Shared by the BullMQ worker (scheduled) and the
