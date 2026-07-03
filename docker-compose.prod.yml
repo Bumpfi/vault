@@ -35,12 +35,14 @@ services:
     env_file: .env
     expose:
       - '3000'
-    command: sh -c "npx drizzle-kit migrate && node .output/server/index.mjs"
+    command: node .output/server/index.mjs
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   worker:
     image: vault:latest # reuses the image built by `web`
@@ -52,11 +54,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   migrate:
     image: vault:latest
     env_file: .env
-    command: npx drizzle-kit migrate
+    command: sh -c "npx drizzle-kit push --force --config drizzle.config.ts"
     depends_on:
       postgres:
         condition: service_healthy
