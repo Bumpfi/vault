@@ -64,7 +64,9 @@ services:
   # HTTPS reverse proxy (self-signed cert via Caddy's internal CA) so Twitch
   # OAuth — which requires https off-localhost — works on the LAN.
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: caddy/Dockerfile
     restart: unless-stopped
     ports:
       - '${HTTP_PORT:-}:80'
@@ -72,7 +74,6 @@ services:
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS}
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddydata:/data
       - caddyconfig:/config
     depends_on:
