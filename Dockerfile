@@ -13,14 +13,17 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 # Produces .output/server/index.mjs (standalone Node server).
-RUN pnpm build
+RUN pnpm build && pnpm run build:worker
 
 FROM base AS runtime
 ENV NODE_ENV=production
-# node_modules (for the worker + drizzle-kit) and built output + source.
+
+WORKDIR /app
+
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.output ./.output
-COPY . .
+COPY --from=build /app/dist ./dist
+
 EXPOSE 3000
 # Default = web. docker-compose overrides command for the worker.
 CMD ["node", ".output/server/index.mjs"]
