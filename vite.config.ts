@@ -10,7 +10,7 @@ import tailwindcss from '@tailwindcss/vite'
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
-    devtools(),
+    devtools({ removeDevtoolsOnBuild: true }),
     tailwindcss(),
     tanstackStart(),
     // Emit a standalone Node server (.output/server/index.mjs) for self-hosting.
