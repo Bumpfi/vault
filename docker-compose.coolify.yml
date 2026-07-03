@@ -1,13 +1,24 @@
-# Production stack for self-hosting on a LAN (Phase 8). See DEPLOY.md.
-# Caddy terminates HTTPS with a self-signed cert so Twitch OAuth works.
-# Usage: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+# Coolify stack: web + worker + postgres + redis. NO caddy — Coolify's own
+# proxy terminates HTTPS (real Let's Encrypt cert) and routes your domain to
+# the web service on port 3000. NO env_file — set the environment variables in
+# Coolify's UI; they are injected into every service here.
+#
+# Required env vars (Coolify → Environment Variables):
+#   POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+#   DATABASE_URL=postgresql://<user>:<password>@postgres:5432/<db>
+#   REDIS_URL=redis://redis:6379
+#   TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
+#   BETTER_AUTH_SECRET            (openssl rand -base64 32)
+#   BETTER_AUTH_URL=https://<your-domain>
+#   PUBLIC_HOST=<your-domain>     (host only, no scheme)
+#   OAUTH_REDIRECT_URL=https://<your-domain>/api/auth/callback/twitch
 services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vault}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in Coolify env}
       POSTGRES_DB: ${POSTGRES_DB:-vault}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -29,10 +40,8 @@ services:
       retries: 10
 
   web:
-    image: vault:latest
     build: .
     restart: unless-stopped
-    env_file: .env
     environment:
       NITRO_HOST: 0.0.0.0
       NITRO_PORT: 3000
@@ -46,36 +55,15 @@ services:
         condition: service_healthy
 
   worker:
-    image: vault:latest # reuses the image built by `web`
+    build: .
     restart: unless-stopped
     command: node_modules/.bin/tsx worker/index.ts
-    env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
-  # HTTPS reverse proxy (self-signed cert via Caddy's internal CA) so Twitch
-  # OAuth — which requires https off-localhost — works on the LAN.
-  caddy:
-    build:
-      context: .
-      dockerfile: caddy/Dockerfile
-    restart: unless-stopped
-    ports:
-      - '${HTTP_PORT:-}:80'
-      - '${HTTPS_PORT:-}:443'
-    environment:
-      SITE_ADDRESS: ${SITE_ADDRESS}
-    volumes:
-      - caddydata:/data
-      - caddyconfig:/config
-    depends_on:
-      - web
-
 volumes:
   pgdata:
   redisdata:
-  caddydata:
-  caddyconfig:

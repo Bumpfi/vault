@@ -70,6 +70,20 @@ Open `https://vault.home`, accept the certificate warning, log in with Twitch,
 then **Settings → Import follows**. Other household members just visit the same
 URL and log in with their own Twitch — each gets their own feed.
 
+### Deploying with Coolify (public VPS)
+
+Use **`docker-compose.coolify.yml`** instead — it drops the bundled Caddy
+(Coolify's own proxy terminates HTTPS with a real certificate) and reads env
+from Coolify instead of a `.env` file:
+
+1. Resource → your app → **Build → Docker Compose Location**: `/docker-compose.coolify.yml`, then *Reload Compose File*.
+2. **Domains**: set one only on the **web** service, e.g. `https://app.yourdomain.com` (leave worker/postgres/redis without domains).
+3. **Environment Variables**: set everything listed at the top of `docker-compose.coolify.yml` (Twitch creds, `BETTER_AUTH_SECRET`, `DATABASE_URL` with the postgres password, URLs pointing at your domain).
+4. Add `https://app.yourdomain.com/api/auth/callback/twitch` as an OAuth redirect in the Twitch console.
+5. Deploy. Then create the schema once via the **web** container's terminal in Coolify:
+   `node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts` and restart the worker.
+6. **Sign in immediately** — the first account becomes admin — and if the instance is public, consider turning **Open registration off** in Settings → Administration.
+
 ### Updating later
 
 ```bash
