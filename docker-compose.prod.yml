@@ -63,7 +63,7 @@ services:
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS}
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy:/etc/caddy:ro
       - caddydata:/data
       - caddyconfig:/config
     depends_on:
