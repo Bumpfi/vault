@@ -29,6 +29,8 @@
   --border: rgba(43, 39, 32, 0.12);
   --input: rgba(43, 39, 32, 0.08);
   --ring: rgba(245, 185, 66, 0.5);
+  /* Ambient radial glow behind the body (per-theme accent tint). */
+  --glow: rgba(245, 185, 66, 0.07);
   --radius: 0.6rem;
 }
 
@@ -55,6 +57,86 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.045);
   --ring: rgba(245, 185, 66, 0.45);
+  --glow: rgba(245, 185, 66, 0.07);
+}
+
+/* ── Dracula ─────────────────────────────────────────────────────────── */
+/* Data-theme blocks come after .dark so their equal-specificity vars win. */
+[data-theme='dracula'] {
+  --background: #282a36;
+  --foreground: #f8f8f2;
+  --card: #21222c;
+  --card-foreground: #f8f8f2;
+  --popover: #343746;
+  --popover-foreground: #f8f8f2;
+  --primary: #bd93f9;
+  --primary-deep: #a679f0;
+  --primary-foreground: #1a1333;
+  --secondary: rgba(248, 248, 242, 0.06);
+  --secondary-foreground: #f8f8f2;
+  --muted: rgba(248, 248, 242, 0.06);
+  --muted-foreground: #9ea4c4;
+  --faint: #6272a4;
+  --accent: rgba(189, 147, 249, 0.14);
+  --accent-foreground: #f8f8f2;
+  --destructive: #ff5555;
+  --destructive-foreground: #f8f8f2;
+  --border: rgba(248, 248, 242, 0.1);
+  --input: rgba(248, 248, 242, 0.06);
+  --ring: rgba(189, 147, 249, 0.5);
+  --glow: rgba(189, 147, 249, 0.1);
+}
+
+/* ── Catppuccin Mocha ────────────────────────────────────────────────── */
+[data-theme='catppuccin'] {
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --card: #181825;
+  --card-foreground: #cdd6f4;
+  --popover: #313244;
+  --popover-foreground: #cdd6f4;
+  --primary: #cba6f7;
+  --primary-deep: #b48ef0;
+  --primary-foreground: #1e1024;
+  --secondary: rgba(205, 214, 244, 0.06);
+  --secondary-foreground: #cdd6f4;
+  --muted: rgba(205, 214, 244, 0.06);
+  --muted-foreground: #a6adc8;
+  --faint: #6c7086;
+  --accent: rgba(203, 166, 247, 0.14);
+  --accent-foreground: #cdd6f4;
+  --destructive: #f38ba8;
+  --destructive-foreground: #1e1e2e;
+  --border: rgba(205, 214, 244, 0.1);
+  --input: rgba(205, 214, 244, 0.06);
+  --ring: rgba(203, 166, 247, 0.5);
+  --glow: rgba(203, 166, 247, 0.1);
+}
+
+/* ── Rain (dark navy + animated rain background) ─────────────────────── */
+[data-theme='rain'] {
+  --background: #0b1220;
+  --foreground: #dbe4f0;
+  --card: #111a2b;
+  --card-foreground: #dbe4f0;
+  --popover: #16233a;
+  --popover-foreground: #dbe4f0;
+  --primary: #6cb6ff;
+  --primary-deep: #4f9cef;
+  --primary-foreground: #06101f;
+  --secondary: rgba(219, 228, 240, 0.06);
+  --secondary-foreground: #dbe4f0;
+  --muted: rgba(219, 228, 240, 0.06);
+  --muted-foreground: #8ea3c2;
+  --faint: #5b6b86;
+  --accent: rgba(108, 182, 255, 0.14);
+  --accent-foreground: #dbe4f0;
+  --destructive: #f27a7a;
+  --destructive-foreground: #06101f;
+  --border: rgba(219, 228, 240, 0.09);
+  --input: rgba(219, 228, 240, 0.06);
+  --ring: rgba(108, 182, 255, 0.45);
+  --glow: rgba(108, 182, 255, 0.1);
 }
 
 @theme inline {
@@ -98,15 +180,89 @@ body {
   font-family: var(--font-sans);
   background-color: var(--background);
   background:
-    radial-gradient(
-      900px 520px at 50% -12%,
-      rgba(245, 185, 66, 0.07),
-      transparent 60%
-    ),
+    radial-gradient(900px 520px at 50% -12%, var(--glow), transparent 60%),
     var(--background);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Rain theme: two layers of thin falling streaks. Each layer is a single
+   elongated-ellipse gradient tiled into discrete drops, scrolled straight down
+   by exactly one tile per loop (seamless). Two speeds/sizes give depth. The
+   layers sit behind page content (fixed, z-index -1) so the normal --glow /
+   --background still show through. Pure CSS, no extra DOM. */
+[data-theme='rain'] body::before,
+[data-theme='rain'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+/* Near layer: brighter, longer streaks, faster. Several drops scattered at
+   different x/y within one large tile so there's no visible row grid. */
+[data-theme='rain'] body::before {
+  background-image:
+    radial-gradient(
+      1.5px 58px at 12% 5%,
+      rgba(174, 206, 255, 0.45),
+      rgba(174, 206, 255, 0) 60%
+    ),
+    radial-gradient(
+      1.4px 46px at 63% 28%,
+      rgba(174, 206, 255, 0.38),
+      rgba(174, 206, 255, 0) 60%
+    ),
+    radial-gradient(
+      1.6px 64px at 39% 55%,
+      rgba(174, 206, 255, 0.42),
+      rgba(174, 206, 255, 0) 60%
+    ),
+    radial-gradient(
+      1.3px 40px at 86% 78%,
+      rgba(174, 206, 255, 0.34),
+      rgba(174, 206, 255, 0) 60%
+    );
+  background-size: 330px 520px;
+  animation: rain-near 0.75s linear infinite;
+}
+/* Far layer: dimmer, shorter, denser, slower — parallax depth. */
+[data-theme='rain'] body::after {
+  background-image:
+    radial-gradient(
+      1px 34px at 28% 14%,
+      rgba(174, 206, 255, 0.22),
+      rgba(174, 206, 255, 0) 60%
+    ),
+    radial-gradient(
+      1px 30px at 71% 47%,
+      rgba(174, 206, 255, 0.18),
+      rgba(174, 206, 255, 0) 60%
+    ),
+    radial-gradient(
+      1px 38px at 49% 81%,
+      rgba(174, 206, 255, 0.2),
+      rgba(174, 206, 255, 0) 60%
+    );
+  background-size: 200px 360px;
+  animation: rain-far 1.2s linear infinite;
+}
+@keyframes rain-near {
+  to {
+    background-position: -20px 520px;
+  }
+}
+@keyframes rain-far {
+  to {
+    background-position: -12px 360px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='rain'] body::before,
+  [data-theme='rain'] body::after {
+    display: none;
+  }
 }
 
 /* Thin, low-contrast scrollbars */
