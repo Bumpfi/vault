@@ -16,6 +16,7 @@ import {
   removeUser,
   setRegistrationEnabled,
 } from '#/server/admin'
+import { applyTheme, THEMES } from '#/lib/theme'
 import { AppHeader } from '#/components/app-header'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -200,14 +201,17 @@ function Settings() {
               value={theme}
               onChange={(e) => {
                 const next = e.target.value
-                document.documentElement.classList.toggle('dark', next === 'dark')
+                applyTheme(next)
                 localStorage.theme = next
                 save({ theme: next })
               }}
               className="h-9 rounded-md border bg-background px-2 text-sm"
             >
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
+              {THEMES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
             </select>
           </div>
         </section>

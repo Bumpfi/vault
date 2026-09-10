@@ -9,6 +9,7 @@ import { AppHeader } from '#/components/app-header'
 import { VodCard } from '#/components/vod-card'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
+import { applyTheme } from '#/lib/theme'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
@@ -62,10 +63,7 @@ function Home() {
       appliedDefaults.current = true
       setUnwatchedOnly(settings.data.unwatchedDefault)
       setCategory(settings.data.defaultCategory)
-      document.documentElement.classList.toggle(
-        'dark',
-        settings.data.theme === 'dark',
-      )
+      applyTheme(settings.data.theme)
       localStorage.theme = settings.data.theme
     }
   }, [settings.data])

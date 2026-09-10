@@ -1,26 +1,74 @@
 import { Link, useRouter } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { Moon, Sun } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, Palette } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
 import { saveSettings } from '#/server/settings'
+import { applyTheme, isTheme, THEMES } from '#/lib/theme'
+import type { Theme } from '#/lib/theme'
 import { Button } from '#/components/ui/button'
 
 function ThemeToggle() {
-  const [dark, setDark] = useState(true)
+  const [theme, setTheme] = useState<Theme>('dark')
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    setDark(document.documentElement.classList.contains('dark'))
+    const stored = localStorage.theme
+    if (isTheme(stored)) setTheme(stored)
   }, [])
-  const toggle = () => {
-    const next = !dark
-    setDark(next)
-    document.documentElement.classList.toggle('dark', next)
-    localStorage.theme = next ? 'dark' : 'light'
-    void saveSettings({ data: { theme: next ? 'dark' : 'light' } })
+
+  // Close the menu on any outside click.
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  const pick = (next: Theme) => {
+    setTheme(next)
+    setOpen(false)
+    applyTheme(next)
+    localStorage.theme = next
+    void saveSettings({ data: { theme: next } })
   }
+
   return (
-    <Button variant="ghost" size="icon" onClick={toggle} title="Toggle theme">
-      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-    </Button>
+    <div ref={ref} className="relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setOpen((v) => !v)}
+        title="Theme"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <Palette className="size-4" />
+      </Button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-30 mt-1 min-w-40 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+        >
+          {THEMES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              role="menuitemradio"
+              aria-checked={theme === t.value}
+              onClick={() => pick(t.value)}
+              className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+            >
+              {t.label}
+              {theme === t.value ? <Check className="size-3.5" /> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
