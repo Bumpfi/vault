@@ -20,6 +20,9 @@ export const Route = createFileRoute('/watch/$videoId')({
     if (!session) throw redirect({ to: '/login' })
   },
   loader: ({ params }) => getWatchData({ data: params.videoId }),
+  head: ({ loaderData }) => ({
+    meta: [{ title: loaderData?.title ? `${loaderData.title} — Vault` : 'Vault' }],
+  }),
   component: Watch,
 })
 

@@ -8,6 +8,7 @@ import { listLiveStatus } from '#/server/streamers'
 import { AppHeader } from '#/components/app-header'
 import { VodCard } from '#/components/vod-card'
 import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
@@ -22,6 +23,7 @@ function Home() {
   const [unwatchedOnly, setUnwatchedOnly] = useState(false)
   const [streamerId, setStreamerId] = useState<number | null>(null)
   const [category, setCategory] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const vods = useQuery({
     queryKey: ['vods'],
@@ -95,13 +97,20 @@ function Home() {
   }, [vods.data, category])
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
     return (vods.data ?? []).filter((v) => {
       if (!inCategory(v.category)) return false
       if (unwatchedOnly && v.watched) return false
       if (streamerId !== null && v.streamerId !== streamerId) return false
+      if (
+        q &&
+        !v.title.toLowerCase().includes(q) &&
+        !v.streamerName.toLowerCase().includes(q)
+      )
+        return false
       return true
     })
-  }, [vods.data, category, unwatchedOnly, streamerId])
+  }, [vods.data, category, unwatchedOnly, streamerId, search])
 
   return (
     <div>
@@ -113,7 +122,10 @@ function Home() {
             <div className="flex gap-5 overflow-x-auto pb-2">
               {continueWatching.data.map((v) => (
                 <div key={v.id} className="w-64 shrink-0">
-                  <VodCard vod={v} live={!!v.streamId && liveStreams.has(v.streamId)} />
+                  <VodCard
+                    vod={v}
+                    live={!!v.streamId && liveStreams.has(v.streamId)}
+                  />
                 </div>
               ))}
             </div>
@@ -184,6 +196,12 @@ function Home() {
             </Button>
           ))}
           <div className="ml-auto flex items-center gap-2">
+            <Input
+              placeholder="Search VODs…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 w-44"
+            />
             {refreshMut.data ? (
               <span className="text-xs text-muted-foreground">
                 Polled {refreshMut.data.polled} streamers
@@ -201,7 +219,15 @@ function Home() {
         </div>
 
         {vods.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
+            {Array.from({ length: 12 }, (_, i) => (
+              <div key={i} className="flex animate-pulse flex-col gap-2">
+                <div className="aspect-video rounded-lg bg-muted" />
+                <div className="h-4 w-3/4 rounded bg-muted" />
+                <div className="h-3 w-1/2 rounded bg-muted" />
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No VODs yet. Import follows in Settings, then the worker fills this
