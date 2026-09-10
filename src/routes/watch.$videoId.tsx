@@ -110,6 +110,7 @@ function Watch() {
                   videoId={data.twitchVideoId}
                   currentTime={currentTime}
                   streamStartedAt={data.createdAtTwitch}
+                  broadcasterId={data.broadcasterId}
                 />
               </div>
             </aside>

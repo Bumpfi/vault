@@ -204,6 +204,62 @@ export async function getLiveStreams(
   return live
 }
 
+interface TwitchBadgeSet {
+  set_id: string
+  versions: Array<{
+    id: string
+    image_url_1x: string
+    image_url_2x: string
+    title: string
+  }>
+}
+
+/** Chat badge map: setID -> version -> { url, title }. */
+export type BadgeMap = Record<
+  string,
+  Record<string, { url: string; url2x: string; title: string }>
+>
+
+function toBadgeMap(sets: Array<TwitchBadgeSet>): BadgeMap {
+  const map: BadgeMap = {}
+  for (const s of sets) {
+    map[s.set_id] = {}
+    for (const v of s.versions) {
+      map[s.set_id][v.id] = {
+        url: v.image_url_1x,
+        url2x: v.image_url_2x,
+        title: v.title,
+      }
+    }
+  }
+  return map
+}
+
+// Global badge sets (moderator, vip, broadcaster, turbo, …) are the same for
+// every channel and change rarely — cache in memory for the process lifetime.
+let globalBadges: { map: BadgeMap; expiresAt: number } | null = null
+
+export async function getGlobalBadges(token: string): Promise<BadgeMap> {
+  if (globalBadges && globalBadges.expiresAt > Date.now()) return globalBadges.map
+  const { data } = await helixGet<TwitchBadgeSet>('/chat/badges/global', token)
+  globalBadges = {
+    map: toBadgeMap(data),
+    expiresAt: Date.now() + 6 * 60 * 60 * 1000,
+  }
+  return globalBadges.map
+}
+
+/** Channel-specific badge sets (subscriber tiers, bits, campaigns). */
+export async function getChannelBadges(
+  token: string,
+  broadcasterId: string,
+): Promise<BadgeMap> {
+  const { data } = await helixGet<TwitchBadgeSet>('/chat/badges', token, {
+    broadcaster_id: broadcasterId,
+  })
+  return toBadgeMap(data)
+}
+
 /** Parse Twitch duration ("1h2m3s", "45m10s", "30s") into seconds. */
 export function parseDuration(duration: string): number {
   const m = duration.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/)

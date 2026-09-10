@@ -1,6 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { auth } from '#/lib/auth'
+import {
+  getAppToken,
+  getChannelBadges,
+  getGlobalBadges,
+} from '#/lib/twitch'
+import type { BadgeMap } from '#/lib/twitch'
 
 // Unofficial Twitch GraphQL — same anonymous endpoint TwitchDownloader uses to
 // read VOD chat. Undocumented / ToS gray area; can break if Twitch changes it.
@@ -15,12 +21,18 @@ export interface ChatFragment {
   emoteId?: string
 }
 
+export interface ChatBadgeRef {
+  setID: string
+  version: string
+}
+
 export interface ChatComment {
   id: string
   offset: number
   name: string
   color: string | null
   fragments: Array<ChatFragment>
+  badges: Array<ChatBadgeRef>
 }
 
 interface GqlFragment {
@@ -36,6 +48,7 @@ interface GqlEdge {
     message?: {
       userColor?: string | null
       fragments?: Array<GqlFragment>
+      userBadges?: Array<{ setID?: string; version?: string }> | null
     } | null
   }
 }
@@ -95,6 +108,24 @@ export const getVodChapters = createServerFn({ method: 'GET' })
     }))
   })
 
+// Global + channel chat badges, merged (channel wins) so the replay can render
+// mod/VIP/sub/broadcaster icons like native Twitch chat. Official Helix API.
+export const getChatBadges = createServerFn({ method: 'GET' })
+  .validator((broadcasterId: string) => broadcasterId)
+  .handler(async ({ data: broadcasterId }) => {
+    const { headers } = getRequest()
+    const session = await auth.api.getSession({ headers })
+    if (!session) throw new Error('Unauthorized')
+
+    const token = await getAppToken()
+    const [global, channel] = await Promise.all([
+      getGlobalBadges(token),
+      // A channel with no custom badges (or a bad id) shouldn't kill globals.
+      getChannelBadges(token, broadcasterId).catch(() => ({})),
+    ])
+    return { ...global, ...channel } satisfies BadgeMap
+  })
+
 export const getVodChat = createServerFn({ method: 'GET' })
   .validator(
     (input: { videoId: string; offsetSeconds?: number; cursor?: string }) =>
@@ -149,6 +180,10 @@ export const getVodChat = createServerFn({ method: 'GET' })
         text: f.text,
         emoteId: f.emote?.emoteID ?? undefined,
       })),
+      // Twitch sends a placeholder badge with an empty setID — drop it.
+      badges: (e.node.message?.userBadges ?? [])
+        .filter((b) => b.setID)
+        .map((b) => ({ setID: b.setID as string, version: b.version ?? '1' })),
     }))
 
     const hasMore = !!block.pageInfo?.hasNextPage

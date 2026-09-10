@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { and, eq, lte } from 'drizzle-orm'
 import { db } from '#/db'
-import { vod, watchProgress } from '#/db/schema'
+import { streamer, vod, watchProgress } from '#/db/schema'
 import { requireUserId } from '#/lib/current-user'
 
 const WATCHED_THRESHOLD = 0.9
@@ -21,8 +21,11 @@ export const getWatchData = createServerFn({ method: 'GET' })
         isAvailable: vod.isAvailable,
         watched: watchProgress.watched,
         position: watchProgress.positionSeconds,
+        // Twitch broadcaster id — needed for channel-specific chat badges.
+        broadcasterId: streamer.twitchUserId,
       })
       .from(vod)
+      .innerJoin(streamer, eq(streamer.id, vod.streamerId))
       .leftJoin(
         watchProgress,
         and(eq(watchProgress.vodId, vod.id), eq(watchProgress.userId, userId)),
