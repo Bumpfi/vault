@@ -32,7 +32,6 @@ services:
 
   web:
     build: .
-    image: vault
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -57,7 +56,8 @@ services:
         condition: service_healthy
 
   worker:
-    image: vault
+    # Same image as web (the second build is served from the layer cache).
+    build: .
     restart: unless-stopped
     command: ['node', '.output/jobs/worker.cjs']
     environment:
