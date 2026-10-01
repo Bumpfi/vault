@@ -1,33 +1,22 @@
-# Single image for both `web` and `worker` (worker overrides the command).
-# Contains the built Nitro server (.output) for web + source/node_modules for
-# the tsx worker.
-FROM node:22-slim AS base
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
-WORKDIR /app
+# One image for both processes (web and worker); docker-compose picks the
+# command. The runtime stage contains only build output: the web server, the
+# bundled worker/migrate scripts and the SQL migrations — no source code and
+# no node_modules.
 
-FROM base AS build
-# Install deps (incl. dev — needed for the build and the tsx worker).
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
+FROM node:22-slim AS build
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-# Produces .output/server/index.mjs (standalone Node server).
-RUN pnpm build && pnpm run build:worker
+RUN pnpm build
 
-FROM base AS runtime
-ENV NODE_ENV=production
-
+FROM node:22-slim AS runtime
 WORKDIR /app
-
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/.output ./.output
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
-COPY --from=build /app/src ./src
-COPY --from=build /app/worker ./worker
-
+ENV NODE_ENV=production
+COPY --from=build --chown=node:node /app/.output ./.output
+COPY --from=build --chown=node:node /app/drizzle ./drizzle
+USER node
 EXPOSE 3000
-# Default = web. docker-compose overrides command for the worker.
-CMD ["node", ".output/server/index.mjs"]
+# Apply pending migrations, then start the web server.
+CMD ["sh", "-c", "node .output/jobs/migrate.cjs && exec node .output/server/index.mjs"]

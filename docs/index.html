@@ -1,307 +1,505 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vault — self-hosted Twitch VOD library</title>
-  <meta name="description" content="Vault is a self-hosted dashboard for Twitch VODs: track streamers, resume where you left off, replay chat, recover deleted VODs, and download them. Multi-user, runs on your own hardware." />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='4' fill='%23f5b942'/%3E%3C/svg%3E" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #08080a;
-      --surface: #141416;
-      --primary: #f5b942;
-      --primary-fg: #1a1407;
-      --text: #f3f1ec;
-      --muted: #9c9a94;
-      --faint: #6a6862;
-      --border: rgba(255, 255, 255, 0.08);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Hanken Grotesk', sans-serif;
-      font-size: 16px;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-    .container { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vault — self-hosted Twitch VOD library</title>
+    <meta
+      name="description"
+      content="Vault is a self-hosted dashboard for Twitch VODs: track streamers, resume where you left off, replay chat, recover deleted VODs, and download them. Multi-user, runs on your own hardware."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='4' fill='%23f5b942'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #08080a;
+        --surface: #141416;
+        --primary: #f5b942;
+        --primary-fg: #1a1407;
+        --text: #f3f1ec;
+        --muted: #9c9a94;
+        --faint: #6a6862;
+        --border: rgba(255, 255, 255, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Hanken Grotesk', sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      .container {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
 
-    header {
-      border-bottom: 1px solid var(--border);
-      padding: 16px 0;
-    }
-    header .container { display: flex; align-items: center; justify-content: space-between; }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
-    .brand-mark { width: 12px; height: 12px; border-radius: 3px; background: var(--primary); }
-    header nav { display: flex; gap: 20px; align-items: center; }
-    header nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
-    header nav a:hover { color: var(--text); }
+      header {
+        border-bottom: 1px solid var(--border);
+        padding: 16px 0;
+      }
+      header .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+        color: var(--text);
+        text-decoration: none;
+      }
+      .brand-mark {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        background: var(--primary);
+      }
+      header nav {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+      header nav a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 14px;
+      }
+      header nav a:hover {
+        color: var(--text);
+      }
 
-    section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+      section {
+        padding: 56px 0;
+        border-bottom: 1px solid var(--border);
+      }
 
-    h1 { font-size: 34px; font-weight: 800; line-height: 1.2; letter-spacing: -0.5px; }
-    h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
-    h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-    .lede { color: var(--muted); font-size: 18px; margin-top: 14px; max-width: 620px; }
+      h1 {
+        font-size: 34px;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.5px;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 20px;
+      }
+      h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .lede {
+        color: var(--muted);
+        font-size: 18px;
+        margin-top: 14px;
+        max-width: 620px;
+      }
 
-    .actions { margin-top: 26px; display: flex; gap: 10px; flex-wrap: wrap; }
-    .btn {
-      display: inline-block;
-      padding: 9px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-    .btn:hover { border-color: rgba(255, 255, 255, 0.2); }
-    .btn.primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
-    .btn.primary:hover { background: #e8ad39; }
+      .actions {
+        margin-top: 26px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-block;
+        padding: 9px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .btn:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .btn.primary {
+        background: var(--primary);
+        color: var(--primary-fg);
+        border-color: var(--primary);
+      }
+      .btn.primary:hover {
+        background: #e8ad39;
+      }
 
-    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .feature {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      background: var(--surface);
-    }
-    .feature p { color: var(--muted); font-size: 14px; }
-    @media (max-width: 640px) { .feature-grid { grid-template-columns: 1fr; } }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .feature {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        background: var(--surface);
+      }
+      .feature p {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      @media (max-width: 640px) {
+        .feature-grid {
+          grid-template-columns: 1fr;
+        }
+      }
 
-    ol.steps { padding-left: 20px; display: flex; flex-direction: column; gap: 14px; }
-    ol.steps li::marker { color: var(--primary); font-weight: 600; }
-    ol.steps p { color: var(--muted); font-size: 15px; }
+      ol.steps {
+        padding-left: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      ol.steps li::marker {
+        color: var(--primary);
+        font-weight: 600;
+      }
+      ol.steps p {
+        color: var(--muted);
+        font-size: 15px;
+      }
 
-    pre {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 16px;
-      overflow-x: auto;
-      margin-top: 8px;
-    }
-    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
-    p code, li code {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 1px 5px;
-    }
+      pre {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        margin-top: 8px;
+      }
+      code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+      }
+      p code,
+      li code {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
 
-    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-    .tab {
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: var(--muted);
-      font: inherit;
-      font-size: 14px;
-      font-weight: 600;
-      padding: 8px 12px;
-      cursor: pointer;
-      margin-bottom: -1px;
-    }
-    .tab:hover { color: var(--text); }
-    .tab.active { color: var(--text); border-bottom-color: var(--primary); }
-    .tab-panel p { color: var(--muted); font-size: 15px; margin-bottom: 8px; }
-    .tab-panel pre { margin-top: 12px; }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 20px;
+      }
+      .tab {
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 8px 12px;
+        cursor: pointer;
+        margin-bottom: -1px;
+      }
+      .tab:hover {
+        color: var(--text);
+      }
+      .tab.active {
+        color: var(--text);
+        border-bottom-color: var(--primary);
+      }
+      .tab-panel p {
+        color: var(--muted);
+        font-size: 15px;
+        margin-bottom: 8px;
+      }
+      .tab-panel pre {
+        margin-top: 12px;
+      }
 
-    .stack-list { color: var(--muted); font-size: 15px; }
-    .stack-list b { color: var(--text); font-weight: 600; }
+      .stack-list {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .stack-list b {
+        color: var(--text);
+        font-weight: 600;
+      }
 
-    footer { padding: 28px 0 40px; }
-    footer .container { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--faint); font-size: 14px; }
-    footer a { color: var(--muted); text-decoration: none; }
-    footer a:hover { color: var(--text); }
-  </style>
-</head>
-<body>
-  <header>
-    <div class="container">
-      <a class="brand" href="#"><span class="brand-mark"></span>Vault</a>
-      <nav>
-        <a href="#features">Features</a>
-        <a href="#quick-start">Quick start</a>
-        <a href="https://github.com/Bumpfi/vault">GitHub</a>
-      </nav>
-    </div>
-  </header>
-
-  <section>
-    <div class="container">
-      <h1>Your Twitch VODs, on your own server.</h1>
-      <p class="lede">
-        Vault is a self-hosted dashboard for Twitch VODs. Track the streamers
-        you follow, watch with resume and chat replay, recover deleted VODs,
-        and download them to your machine — multi-user, on your own hardware.
-      </p>
-      <div class="actions">
-        <a class="btn primary" href="#quick-start">Get started</a>
-        <a class="btn" href="https://github.com/Bumpfi/vault">View on GitHub</a>
+      footer {
+        padding: 28px 0 40px;
+      }
+      footer .container {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        color: var(--faint);
+        font-size: 14px;
+      }
+      footer a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      footer a:hover {
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <a class="brand" href="#"><span class="brand-mark"></span>Vault</a>
+        <nav>
+          <a href="#features">Features</a>
+          <a href="#quick-start">Quick start</a>
+          <a href="https://github.com/Bumpfi/vault">GitHub</a>
+        </nav>
       </div>
-    </div>
-  </section>
+    </header>
 
-  <section id="features">
-    <div class="container">
-      <h2>Features</h2>
-      <div class="feature-grid">
-        <div class="feature">
-          <h3>Automatic VOD tracking</h3>
-          <p>Import your Twitch follows once. A background worker polls for new VODs every 15 minutes and fills your feed.</p>
-        </div>
-        <div class="feature">
-          <h3>Resume &amp; watched state</h3>
-          <p>Pick up exactly where you left off. VODs auto-mark as watched at 90%, with a continue-watching row on the dashboard.</p>
-        </div>
-        <div class="feature">
-          <h3>Chat replay, synced</h3>
-          <p>The original chat plays back alongside the VOD, with emotes and real-world timestamps.</p>
-        </div>
-        <div class="feature">
-          <h3>Deleted-VOD recovery</h3>
-          <p>Twitch removed a VOD? Vault probes Twitch's CDN and can often still play recently deleted streams.</p>
-        </div>
-        <div class="feature">
-          <h3>One-click download</h3>
-          <p>Save any VOD to your computer as a single playable file. No extra tools needed.</p>
-        </div>
-        <div class="feature">
-          <h3>Multi-user</h3>
-          <p>Everyone signs in with their own Twitch account and gets their own subscriptions and watch progress. The first user becomes admin and controls registration.</p>
-        </div>
-        <div class="feature">
-          <h3>Split view</h3>
-          <p>Watch two VODs side by side, synced to the same real-world moment — great for multi-POV streams.</p>
-        </div>
-        <div class="feature">
-          <h3>Theater mode &amp; theming</h3>
-          <p>A player that fills your screen without fullscreen, plus dark and light themes saved per account.</p>
+    <section>
+      <div class="container">
+        <h1>Your Twitch VODs, on your own server.</h1>
+        <p class="lede">
+          Vault is a self-hosted dashboard for Twitch VODs. Track the streamers you
+          follow, watch with resume and chat replay, recover deleted VODs, and download
+          them to your machine — multi-user, on your own hardware.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="#quick-start">Get started</a>
+          <a class="btn" href="https://github.com/Bumpfi/vault">View on GitHub</a>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="quick-start">
-    <div class="container">
-      <h2>Quick start</h2>
-      <p style="color: var(--muted); margin-bottom: 20px;">
-        Every setup needs a free Twitch application from
-        <a href="https://dev.twitch.tv/console/apps" style="color: var(--primary)">dev.twitch.tv/console/apps</a>
-        (category: Website Integration) with the OAuth redirect URL
-        <code>https://&lt;your-host&gt;/api/auth/callback/twitch</code> — the
-        login page shows your exact URL. Then pick where you're deploying:
-      </p>
-
-      <div class="tabs" role="tablist">
-        <button class="tab active" data-tab="lan">Home server / LAN</button>
-        <button class="tab" data-tab="coolify">VPS with Coolify</button>
-        <button class="tab" data-tab="dev">Local development</button>
+    <section id="features">
+      <div class="container">
+        <h2>Features</h2>
+        <div class="feature-grid">
+          <div class="feature">
+            <h3>Automatic VOD tracking</h3>
+            <p>
+              Import your Twitch follows once. A background worker polls for new VODs
+              every 15 minutes and fills your feed.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Resume &amp; watched state</h3>
+            <p>
+              Pick up exactly where you left off. VODs auto-mark as watched at 90%, with a
+              continue-watching row on the dashboard.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Chat replay, synced</h3>
+            <p>
+              The original chat plays back alongside the VOD, with emotes and real-world
+              timestamps.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Deleted-VOD recovery</h3>
+            <p>
+              Twitch removed a VOD? Vault probes Twitch's CDN and can often still play
+              recently deleted streams.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>One-click download</h3>
+            <p>
+              Save any VOD to your computer as a single playable file. No extra tools
+              needed.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Multi-user</h3>
+            <p>
+              Everyone signs in with their own Twitch account and gets their own
+              subscriptions and watch progress. The first user becomes admin and controls
+              registration.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Split view</h3>
+            <p>
+              Watch two VODs side by side, synced to the same real-world moment — great
+              for multi-POV streams.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Theater mode &amp; theming</h3>
+            <p>
+              A player that fills your screen without fullscreen, plus dark and light
+              themes saved per account.
+            </p>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="tab-panel" data-panel="lan">
-        <p>For unraid, a NAS, or any box on your network. Private to your LAN;
-        a bundled Caddy serves HTTPS with a self-signed certificate (Twitch
-        OAuth requires https off-localhost — accept the warning once per
-        device).</p>
-        <pre><code>git clone https://github.com/Bumpfi/vault.git &amp;&amp; cd vault
+    <section id="quick-start">
+      <div class="container">
+        <h2>Quick start</h2>
+        <p style="color: var(--muted); margin-bottom: 20px">
+          Every setup needs a free Twitch application from
+          <a href="https://dev.twitch.tv/console/apps" style="color: var(--primary)"
+            >dev.twitch.tv/console/apps</a
+          >
+          (category: Website Integration) with the OAuth redirect URL
+          <code>https://&lt;your-host&gt;/api/auth/callback/twitch</code> — the login page
+          shows your exact URL. Then pick where you're deploying:
+        </p>
+
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="lan">Home server / LAN</button>
+          <button class="tab" data-tab="coolify">VPS with Coolify</button>
+          <button class="tab" data-tab="dev">Local development</button>
+        </div>
+
+        <div class="tab-panel" data-panel="lan">
+          <p>
+            For unraid, a NAS, or any box on your network. Private to your LAN; a bundled
+            Caddy serves HTTPS with a self-signed certificate (Twitch OAuth requires https
+            off-localhost — accept the warning once per device).
+          </p>
+          <pre><code>git clone https://github.com/Bumpfi/vault.git &amp;&amp; cd vault
 cp .env.production.example .env    # fill Twitch creds, a secret, your host
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-docker compose -f docker-compose.prod.yml exec web \
-  node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts
-docker compose -f docker-compose.prod.yml restart worker</code></pre>
-        <p>Open <code>https://&lt;your-host&gt;</code> (e.g.
-        <code>vault.home</code> — point it at the box in your router/Pi-hole
-        DNS) and sign in.</p>
-      </div>
+docker compose -f docker-compose.prod.yml up -d --build</code></pre>
+          <p>
+            Open <code>https://&lt;your-host&gt;</code> (e.g. <code>vault.home</code> —
+            point it at the box in your router/Pi-hole DNS) and sign in.
+          </p>
+        </div>
 
-      <div class="tab-panel" data-panel="coolify" hidden>
-        <p>For a public VPS managed by Coolify — its proxy terminates HTTPS
-        with a real Let's Encrypt certificate, so there's no bundled Caddy.</p>
-        <ol class="steps">
-          <li><p>New resource → <b>Git repository</b> → Build Pack <b>Docker Compose</b>, compose location <code>/docker-compose.coolify.yml</code>.</p></li>
-          <li><p>Domain on the <b>web</b> service only, with the container port: <code>https://app.yourdomain.com:3000</code>. Leave the worker without a domain.</p></li>
-          <li><p>Fill the environment variables listed at the top of <code>docker-compose.coolify.yml</code> (Twitch creds, secrets, your domain), then deploy.</p></li>
-          <li><p>Once, in the web container's terminal: <code>node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts</code>, then restart the worker.</p></li>
-          <li><p>Sign in immediately — the first account becomes admin. On a public instance, consider turning off open registration in Settings.</p></li>
-        </ol>
-      </div>
+        <div class="tab-panel" data-panel="coolify" hidden>
+          <p>
+            For a public VPS managed by Coolify — its proxy terminates HTTPS with a real
+            Let's Encrypt certificate, so there's no bundled Caddy.
+          </p>
+          <ol class="steps">
+            <li>
+              <p>
+                New resource → <b>Git repository</b> → Build Pack <b>Docker Compose</b>,
+                compose location <code>/docker-compose.coolify.yml</code>.
+              </p>
+            </li>
+            <li>
+              <p>
+                Domain on the <b>web</b> service only, with the container port:
+                <code>https://app.yourdomain.com:3000</code>. Leave the worker without a
+                domain.
+              </p>
+            </li>
+            <li>
+              <p>
+                Fill in the environment variables from
+                <code>.env.production.example</code> (Twitch app, secrets, your URL), then
+                deploy. The database is set up automatically.
+              </p>
+            </li>
+            <li>
+              <p>
+                Sign in immediately — the first account becomes admin. On a public
+                instance, consider turning off open registration in Settings.
+              </p>
+            </li>
+          </ol>
+        </div>
 
-      <div class="tab-panel" data-panel="dev" hidden>
-        <p>For hacking on Vault itself. Twitch allows plain
-        <code>http://localhost</code>, so no HTTPS setup is needed.</p>
-        <pre><code>git clone https://github.com/Bumpfi/vault.git &amp;&amp; cd vault
+        <div class="tab-panel" data-panel="dev" hidden>
+          <p>
+            For hacking on Vault itself. Twitch allows plain
+            <code>http://localhost</code>, so no HTTPS setup is needed.
+          </p>
+          <pre><code>git clone https://github.com/Bumpfi/vault.git &amp;&amp; cd vault
 pnpm install
 docker compose up -d               # local Postgres + Redis
 cp .env.example .env.local         # fill Twitch creds + a secret
-pnpm db:push
+pnpm db:migrate
 pnpm dev                           # web app on http://localhost:3000
 pnpm worker                        # background jobs (second terminal)</code></pre>
+        </div>
+
+        <p style="color: var(--muted); margin-top: 20px">
+          Full step-by-step for every path — DNS, Twitch redirect URLs, updates,
+          troubleshooting — lives in
+          <a
+            href="https://github.com/Bumpfi/vault/blob/main/DEPLOY.md"
+            style="color: var(--primary)"
+            >DEPLOY.md</a
+          >.
+        </p>
       </div>
+    </section>
 
-      <p style="color: var(--muted); margin-top: 20px;">
-        Full step-by-step for every path — DNS, Twitch redirect URLs, updates,
-        troubleshooting — lives in
-        <a href="https://github.com/Bumpfi/vault/blob/main/DEPLOY.md" style="color: var(--primary)">DEPLOY.md</a>.
-      </p>
-    </div>
-  </section>
+    <section>
+      <div class="container">
+        <h2>Stack</h2>
+        <p class="stack-list">
+          <b>TanStack Start</b> (React SSR) · <b>PostgreSQL</b> + Drizzle ·
+          <b>Better Auth</b> (Twitch OAuth) · <b>BullMQ</b> + Redis worker ·
+          <b>Docker Compose</b> with Caddy for LAN HTTPS. Full setup and deployment docs
+          live in the
+          <a href="https://github.com/Bumpfi/vault" style="color: var(--primary)"
+            >repository</a
+          >.
+        </p>
+      </div>
+    </section>
 
-  <section>
-    <div class="container">
-      <h2>Stack</h2>
-      <p class="stack-list">
-        <b>TanStack Start</b> (React SSR) · <b>PostgreSQL</b> + Drizzle ·
-        <b>Better Auth</b> (Twitch OAuth) · <b>BullMQ</b> + Redis worker ·
-        <b>Docker Compose</b> with Caddy for LAN HTTPS. Full setup and
-        deployment docs live in the
-        <a href="https://github.com/Bumpfi/vault" style="color: var(--primary)">repository</a>.
-      </p>
-    </div>
-  </section>
+    <footer>
+      <div class="container">
+        <span>MIT licensed. Not affiliated with Twitch.</span>
+        <a href="https://github.com/Bumpfi/vault">github.com/Bumpfi/vault</a>
+      </div>
+    </footer>
 
-  <footer>
-    <div class="container">
-      <span>MIT licensed. Not affiliated with Twitch.</span>
-      <a href="https://github.com/Bumpfi/vault">github.com/Bumpfi/vault</a>
-    </div>
-  </footer>
-
-  <script>
-    // Deploy-guide tabs.
-    document.querySelectorAll('.tab').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        document.querySelectorAll('.tab').forEach(function (b) {
-          b.classList.toggle('active', b === btn)
-        })
-        document.querySelectorAll('.tab-panel').forEach(function (p) {
-          p.hidden = p.dataset.panel !== btn.dataset.tab
+    <script>
+      // Deploy-guide tabs.
+      document.querySelectorAll('.tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.tab').forEach(function (b) {
+            b.classList.toggle('active', b === btn)
+          })
+          document.querySelectorAll('.tab-panel').forEach(function (p) {
+            p.hidden = p.dataset.panel !== btn.dataset.tab
+          })
         })
       })
-    })
-  </script>
+    </script>
 
-  <!-- Swetrix analytics (self-hosted) -->
-  <script src="https://swetrix.org/swetrix.js" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      swetrix.init('y64Sf7L5gmPw', {
-        apiURL: 'https://analytics.felixkargl.dev/backend/v1/log',
+    <!-- Swetrix analytics (self-hosted) -->
+    <script src="https://swetrix.org/swetrix.js" defer></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        swetrix.init('y64Sf7L5gmPw', {
+          apiURL: 'https://analytics.felixkargl.dev/backend/v1/log',
+        })
+        swetrix.trackViews()
       })
-      swetrix.trackViews()
-    })
-  </script>
-  <noscript>
-    <img
-      src="https://analytics.felixkargl.dev/backend/log/noscript?pid=y64Sf7L5gmPw"
-      alt=""
-      referrerpolicy="no-referrer-when-downgrade"
-    />
-  </noscript>
-</body>
+    </script>
+    <noscript>
+      <img
+        src="https://analytics.felixkargl.dev/backend/log/noscript?pid=y64Sf7L5gmPw"
+        alt=""
+        referrerpolicy="no-referrer-when-downgrade"
+      />
+    </noscript>
+  </body>
 </html>

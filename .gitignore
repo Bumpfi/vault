@@ -1,21 +1,11 @@
 node_modules
 .DS_Store
-dist
-dist-ssr
 *.local
 .env
 .env.local
+
+# build output
+dist
+.output
 .nitro
 .tanstack
-.wrangler
-.output
-.vinxi
-__unconfig*
-todos.json
-
-# Local editor / assistant context (not part of the project)
-.claude
-.vscode
-.idea
-CLAUDE.md
-AGENTS.md

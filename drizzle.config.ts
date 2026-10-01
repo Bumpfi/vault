@@ -1,15 +1,12 @@
-import { config } from 'dotenv'
 import { defineConfig } from 'drizzle-kit'
 
-// drizzle-kit auto-loads .env on its own before this runs, so a plain load
-// can't win (var already set). override: last file listed wins → .env.local.
-config({ path: ['.env', '.env.local'], override: true })
-
+// DATABASE_URL comes from the environment. The package scripts load
+// .env.local via Node's --env-file, which never overrides a variable that is
+// already set — so `DATABASE_URL=… pnpm db:studio` targets exactly that
+// database.
 export default defineConfig({
-  out: './drizzle',
-  schema: './src/db/schema.ts',
   dialect: 'postgresql',
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-  },
+  schema: './src/server/db/schema.ts',
+  out: './drizzle',
+  dbCredentials: { url: process.env.DATABASE_URL ?? '' },
 })

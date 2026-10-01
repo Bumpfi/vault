@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { auth } from '#/lib/auth'
+import { auth } from '#/server/auth'
 
+// Mounts Better Auth's endpoints (sign-in, OAuth callback, sign-out, …).
 export const Route = createFileRoute('/api/auth/$')({
   server: {
     handlers: {

@@ -1,24 +1,61 @@
-# Coolify stack: web + worker + postgres + redis. NO caddy — Coolify's own
-# proxy terminates HTTPS (real Let's Encrypt cert) and routes your domain to
-# the web service on port 3000. NO env_file — set the environment variables in
-# Coolify's UI; they are injected into every service here.
-#
-# Required env vars (Coolify → Environment Variables):
-#   POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
-#   DATABASE_URL=postgresql://<user>:<password>@postgres:5432/<db>
-#   REDIS_URL=redis://redis:6379
-#   TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
-#   BETTER_AUTH_SECRET            (openssl rand -base64 32)
-#   BETTER_AUTH_URL=https://<your-domain>
-#   PUBLIC_HOST=<your-domain>     (host only, no scheme)
-#   OAUTH_REDIRECT_URL=https://<your-domain>/api/auth/callback/twitch
+# Deployment behind an existing reverse proxy that terminates HTTPS — Coolify,
+# Traefik, Nginx Proxy Manager, … Point the proxy at the `web` service on
+# port 3000. Variables come from the host environment or a .env file; see
+# .env.production.example.
+x-app-env: &app-env
+  DATABASE_URL: postgresql://${POSTGRES_USER:-vault}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-vault}
+  REDIS_URL: redis://redis:6379
+  TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID:?}
+  TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET:?}
+  BETTER_AUTH_URL: ${BETTER_AUTH_URL:?}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?}
+  ALLOWED_TWITCH_USER_IDS: ${ALLOWED_TWITCH_USER_IDS:-}
+
 services:
+  web:
+    build: .
+    image: vault
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      HOST: 0.0.0.0
+      PORT: 3000
+    expose:
+      - '3000'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: vault
+    restart: unless-stopped
+    command: ['node', '.output/jobs/worker.cjs']
+    environment:
+      <<: *app-env
+    stop_grace_period: 30s # let a running poll finish on redeploy
+    depends_on:
+      # web applies the database migrations before it reports healthy.
+      web:
+        condition: service_healthy
+
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vault}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in Coolify env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: ${POSTGRES_DB:-vault}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -38,31 +75,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  web:
-    build: .
-    restart: unless-stopped
-    environment:
-      NITRO_HOST: 0.0.0.0
-      NITRO_PORT: 3000
-    expose:
-      - '3000'
-    command: node .output/server/index.mjs
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  worker:
-    build: .
-    restart: unless-stopped
-    command: node_modules/.bin/tsx worker/index.ts
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
 
 volumes:
   pgdata:

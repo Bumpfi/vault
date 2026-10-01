@@ -9,38 +9,44 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SplitRouteImport } from './routes/split'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as WatchVideoIdRouteImport } from './routes/watch.$videoId'
+import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as AuthedSplitRouteImport } from './routes/_authed/split'
+import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as ApiDownloadVodIdRouteImport } from './routes/api/download.$vodId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthedWatchVideoIdRouteImport } from './routes/_authed/watch.$videoId'
 
-const SplitRoute = SplitRouteImport.update({
-  id: '/split',
-  path: '/split',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WatchVideoIdRoute = WatchVideoIdRouteImport.update({
-  id: '/watch/$videoId',
-  path: '/watch/$videoId',
+const AuthedIndexRoute = AuthedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedSplitRoute = AuthedSplitRouteImport.update({
+  id: '/split',
+  path: '/split',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const ApiDownloadVodIdRoute = ApiDownloadVodIdRouteImport.update({
   id: '/api/download/$vodId',
@@ -52,32 +58,41 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedWatchVideoIdRoute = AuthedWatchVideoIdRouteImport.update({
+  id: '/watch/$videoId',
+  path: '/watch/$videoId',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthedIndexRoute
   '/login': typeof LoginRoute
-  '/settings': typeof SettingsRoute
-  '/split': typeof SplitRoute
-  '/watch/$videoId': typeof WatchVideoIdRoute
+  '/settings': typeof AuthedSettingsRoute
+  '/split': typeof AuthedSplitRoute
+  '/api/health': typeof ApiHealthRoute
+  '/watch/$videoId': typeof AuthedWatchVideoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/download/$vodId': typeof ApiDownloadVodIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/settings': typeof SettingsRoute
-  '/split': typeof SplitRoute
-  '/watch/$videoId': typeof WatchVideoIdRoute
+  '/settings': typeof AuthedSettingsRoute
+  '/split': typeof AuthedSplitRoute
+  '/api/health': typeof ApiHealthRoute
+  '/': typeof AuthedIndexRoute
+  '/watch/$videoId': typeof AuthedWatchVideoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/download/$vodId': typeof ApiDownloadVodIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
-  '/settings': typeof SettingsRoute
-  '/split': typeof SplitRoute
-  '/watch/$videoId': typeof WatchVideoIdRoute
+  '/_authed/settings': typeof AuthedSettingsRoute
+  '/_authed/split': typeof AuthedSplitRoute
+  '/api/health': typeof ApiHealthRoute
+  '/_authed/': typeof AuthedIndexRoute
+  '/_authed/watch/$videoId': typeof AuthedWatchVideoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/download/$vodId': typeof ApiDownloadVodIdRoute
 }
@@ -88,55 +103,43 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/split'
+    | '/api/health'
     | '/watch/$videoId'
     | '/api/auth/$'
     | '/api/download/$vodId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/login'
     | '/settings'
     | '/split'
+    | '/api/health'
+    | '/'
     | '/watch/$videoId'
     | '/api/auth/$'
     | '/api/download/$vodId'
   id:
     | '__root__'
-    | '/'
+    | '/_authed'
     | '/login'
-    | '/settings'
-    | '/split'
-    | '/watch/$videoId'
+    | '/_authed/settings'
+    | '/_authed/split'
+    | '/api/health'
+    | '/_authed/'
+    | '/_authed/watch/$videoId'
     | '/api/auth/$'
     | '/api/download/$vodId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
-  SettingsRoute: typeof SettingsRoute
-  SplitRoute: typeof SplitRoute
-  WatchVideoIdRoute: typeof WatchVideoIdRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDownloadVodIdRoute: typeof ApiDownloadVodIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/split': {
-      id: '/split'
-      path: '/split'
-      fullPath: '/split'
-      preLoaderRoute: typeof SplitRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -144,19 +147,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
+    '/_authed': {
+      id: '/_authed'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/watch/$videoId': {
-      id: '/watch/$videoId'
-      path: '/watch/$videoId'
-      fullPath: '/watch/$videoId'
-      preLoaderRoute: typeof WatchVideoIdRouteImport
+    '/_authed/': {
+      id: '/_authed/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/split': {
+      id: '/_authed/split'
+      path: '/split'
+      fullPath: '/split'
+      preLoaderRoute: typeof AuthedSplitRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/settings': {
+      id: '/_authed/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedSettingsRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/api/download/$vodId': {
       id: '/api/download/$vodId'
@@ -172,15 +196,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/watch/$videoId': {
+      id: '/_authed/watch/$videoId'
+      path: '/watch/$videoId'
+      fullPath: '/watch/$videoId'
+      preLoaderRoute: typeof AuthedWatchVideoIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
+interface AuthedRouteChildren {
+  AuthedSettingsRoute: typeof AuthedSettingsRoute
+  AuthedSplitRoute: typeof AuthedSplitRoute
+  AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedWatchVideoIdRoute: typeof AuthedWatchVideoIdRoute
+}
+
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedSettingsRoute: AuthedSettingsRoute,
+  AuthedSplitRoute: AuthedSplitRoute,
+  AuthedIndexRoute: AuthedIndexRoute,
+  AuthedWatchVideoIdRoute: AuthedWatchVideoIdRoute,
+}
+
+const AuthedRouteWithChildren =
+  AuthedRoute._addFileChildren(AuthedRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
-  SettingsRoute: SettingsRoute,
-  SplitRoute: SplitRoute,
-  WatchVideoIdRoute: WatchVideoIdRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDownloadVodIdRoute: ApiDownloadVodIdRoute,
 }
@@ -189,10 +235,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

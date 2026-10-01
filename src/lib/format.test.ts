@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration, formatTimestamp, thumbnail } from './format'
-import { parseDuration } from './twitch'
+import { formatDuration, formatTimestamp, parseDuration, thumbnail } from './format'
 
 describe('parseDuration', () => {
   it('parses full h/m/s', () => {

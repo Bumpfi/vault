@@ -1,9 +1,9 @@
 # Vault
 
-A self-hosted, multi-user **"Netflix for Twitch VODs"** — track the streamers
-you follow, browse their past broadcasts, and watch them with resume, watched
-state, synced chat replay, split-view, and a real-world clock. Runs entirely on
-your own hardware; private to your LAN.
+A self-hosted, multi-user dashboard for Twitch VODs. It tracks the channels you
+follow, collects their past broadcasts in one feed, and lets you watch them with
+resume, watched state, synced chat replay and a split view for watching two
+perspectives side by side.
 
 **Website:** [vault.felixkargl.dev](https://vault.felixkargl.dev)
 
@@ -11,174 +11,153 @@ your own hardware; private to your LAN.
 
 ## Motivation
 
-Twitch VODs are scattered, hard to keep up with, and disappear after a few
-weeks. There's no good way to see *new* VODs across all the streamers you
-follow, track what you've already watched, or resume where you left off — and
-once a VOD is deleted, it's gone.
+Twitch VODs are hard to keep up with. There's no single place that shows the
+new VODs of everyone you follow, nothing remembers what you've already watched
+or where you stopped, and VODs disappear after a few weeks.
 
-Vault is a personal dashboard that fixes that. It's a discovery and viewing
-layer on top of Twitch (not an archive): it polls the streamers you subscribe
-to, surfaces their VODs in one feed, and remembers your progress — like a
-private Netflix for your Twitch follows.
+Vault is a viewing layer on top of Twitch. A background worker polls the
+channels in your library, new VODs land in one feed, and your progress is saved
+per account. It runs on your own hardware, and everyone in your household can
+sign in with their own Twitch account.
 
-**Features**
+### Features
 
-- **Personal feed** — VODs from your subscribed streamers, with watched badges,
-  resume progress bars, live indicators, and "age" stamps.
-- **Multi-user** — everyone logs in with their own Twitch account and gets their
-  own follows, watched state, and progress (shared streamer/VOD catalog). The
-  first user becomes **admin** and controls registration + users in-app.
-- **Player & theater mode** — embedded Twitch player with resume,
-  auto-mark-watched at 90%, a continue-watching row, and a layout that fills
-  the screen without fullscreen.
-- **Real-world clock** — overlay showing the actual time of day a moment aired.
-- **Synced chat replay** — original stream chat scrolls in time with playback.
-- **Game chapters** — jump to each game played during a stream.
-- **Split view** — two players side by side, with one-click sync to the same
-  real-world moment (great for multi-POV roleplay).
-- **One-click download** — save a VOD to your computer as a single playable
-  `.ts` file, streamed straight from Twitch's CDN.
-- **Deleted detection + best-effort recovery** — deleted VODs are flagged, and
-  recently-deleted ones can often still be played back.
-- **Categories + filters**, **mark-older-watched**, **dark & light themes**
-  saved per account.
+- **Feed** of VODs from the channels in your library, with progress bars,
+  watched badges, a live marker on the VOD that is still being recorded, search,
+  and filters by category, channel and unwatched.
+- **Resume and watched state** per user. A VOD counts as watched at 90 %, and a
+  "continue watching" row lists what you started.
+- **Chat replay** next to the player, in sync with playback, with badges
+  (moderator, VIP, subscriber, …) and emotes.
+- **Real-world clock** showing the time of day a moment originally aired.
+- **Game chapters** to jump to each game played in a stream.
+- **Split view**: two VODs side by side, synced to the same real-world moment.
+- **Download** a VOD as a single video file.
+- **Deleted VODs** are flagged, and recently deleted ones can often still be
+  played back.
+- **Multi-user**: the first account becomes admin and controls whether others
+  can register.
+- Five themes (Noir, Cream, Dracula, Catppuccin, Rain).
 
-**Tech stack:** TanStack Start (React, SSR) · PostgreSQL + Drizzle ORM ·
-Better Auth (Twitch OAuth) · shadcn/ui + Tailwind v4 · BullMQ + Redis · pnpm ·
-Docker + Caddy.
+**Stack:** TanStack Start (React, SSR) · PostgreSQL + Drizzle · Better Auth
+(Twitch OAuth) · BullMQ + Redis · Tailwind CSS · Docker
 
 ---
 
 ## Quick Start
 
-**Everyone needs:** a free [Twitch application](https://dev.twitch.tv/console)
-(Client ID + Secret) with the OAuth redirect URL
-`https://<your-host>/api/auth/callback/twitch`. The login page shows your
-exact URL. Then pick where you're running Vault:
+You need Docker and a free [Twitch application](https://dev.twitch.tv/console/apps)
+(category "Website Integration"). Its OAuth redirect URL must be
+`<your Vault URL>/api/auth/callback/twitch`; the login page shows the exact
+value.
 
-### Option A — Home server / LAN (unraid, NAS, spare box)
+### Home server or LAN
 
-Private to your network. A bundled Caddy serves HTTPS with a self-signed cert
-(Twitch OAuth requires https off-localhost).
+Uses `docker-compose.prod.yml`, which includes Caddy for HTTPS. Twitch only
+redirects to https addresses (localhost aside), and Caddy creates its own
+certificate for a private hostname like `vault.home`.
 
 ```bash
 git clone https://github.com/Bumpfi/vault.git && cd vault
-cp .env.production.example .env      # fill Twitch creds, a secret, your host
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-docker compose -f docker-compose.prod.yml exec web node_modules/.bin/drizzle-kit push --force --config drizzle.config.ts
-docker compose -f docker-compose.prod.yml restart worker
+cp .env.production.example .env    # fill in the values
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Open `https://<your-host>`, accept the certificate warning, sign in.
+Open your URL, accept the certificate warning once per device, and sign in.
+The database schema is created automatically on startup.
 
-### Option B — Public VPS with Coolify
+### Behind an existing reverse proxy (Coolify, Traefik, …)
 
-Real HTTPS via Coolify's proxy — use **`docker-compose.coolify.yml`** (no
-bundled Caddy, env via Coolify's UI). New resource → Docker Compose → set the
-compose location, put your domain on the **web** service as
-`https://app.yourdomain.com:3000`, fill the env vars, deploy. Full
-click-by-click in **[DEPLOY.md](DEPLOY.md)**.
+Use `docker-compose.coolify.yml`, which has no bundled proxy, and point your
+proxy at the `web` service on port 3000.
 
-### Option C — Local development
-
-No Docker stack needed beyond Postgres/Redis — see
-[Contributing](#-contributing) below.
-
-Full step-by-step for every path (DNS, Twitch redirect URL, updates, 502
-troubleshooting) is in **[DEPLOY.md](DEPLOY.md)**.
+[DEPLOY.md](DEPLOY.md) has the step-by-step guide for both setups, plus
+updating, backups and troubleshooting.
 
 ---
 
 ## Usage
 
-1. **Sign in** with Twitch — the first account becomes the **admin**, who can
-   enable/disable registration for further users and manage them in
-   **Settings → Administration**. (An optional `ALLOWED_TWITCH_USER_IDS`
-   allowlist additionally restricts signups.) The login page has a built-in
-   setup guide with your exact OAuth callback URL.
-2. **Settings → Import follows** to pull in the channels you follow, then toggle
-   subscriptions and assign categories ("RP", "Variety", …).
-3. **Browse the feed** — filter by category, streamer, or "unwatched only";
-   pick up where you left off in the continue-watching row.
-4. **Watch** — resume, auto-watched at 90%, synced chat replay, real-world
-   clock, and game-chapter jump points.
-5. **Split view** — open a VOD → *Split view* → pick a second one → *sync* both
-   to the same real-world moment.
-6. **Download** — on any VOD's watch page, *Download* saves it to your machine
-   as a single `.ts` file (plays in VLC/mpv).
-
-VOD polling (every 15 min) and availability checks run automatically in the
-background worker.
+1. **Sign in** with Twitch. The first account becomes the admin and can open
+   or close registration under **Settings → Administration**.
+2. **Settings → Import my follows** adds the channels you follow on Twitch.
+   Switch off the ones you don't want in your feed, and give channels a
+   category such as "RP" or "Variety".
+3. **Browse the feed.** New VODs arrive every 15 minutes, or immediately with
+   _Refresh VODs_.
+4. **Watch.** Playback resumes where you stopped; chat replay and chapters
+   are next to and below the player.
+5. **Split view** on the watch page opens a second VOD next to the first; the
+   sync button jumps it to the same real-world moment.
 
 ---
 
-## 🤝 Contributing
+## Project structure
 
-Contributions welcome. To run Vault locally for development:
-
-### Clone the repo
-
-```bash
-git clone https://github.com/Bumpfi/vault.git
-cd vault
+```
+src/
+  routes/              pages and HTTP endpoints (file-based routing)
+    _authed/           pages that require a signed-in user
+    api/               auth handler, VOD download, health check
+  features/            one folder per feature: server functions + UI
+    auth/  feed/  watch/  chat/  streamers/  settings/  admin/
+  server/              server-only code; never shipped to the browser
+    db/                schema, connection, migration runner
+    twitch/            Twitch API clients (official, GraphQL, CDN)
+    jobs/              VOD polling and availability checks
+  components/          shared UI
+  lib/                 small helpers used on both sides
+worker/                background job runner (separate process)
+drizzle/               SQL migrations
 ```
 
-### Install dependencies & start infra
+
+---
+
+## Contributing
+
+To run Vault locally:
 
 ```bash
+git clone https://github.com/Bumpfi/vault.git && cd vault
 pnpm install
-docker compose up -d        # local Postgres + Redis
+docker compose up -d              # Postgres and Redis
+cp .env.example .env.local        # add your Twitch app and a secret
+pnpm db:migrate
+pnpm dev                          # http://localhost:3000
+pnpm worker                       # background jobs, in a second terminal
 ```
 
-### Configure environment
+Add `http://localhost:3000/api/auth/callback/twitch` as a redirect URL in your
+Twitch app.
+
+Before opening a pull request:
 
 ```bash
-cp .env.example .env.local
-# fill TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET, and generate a secret:
-#   openssl rand -base64 32   ->   BETTER_AUTH_SECRET
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-Register `http://localhost:3000/api/auth/callback/twitch` as an OAuth Redirect
-URL in your Twitch app.
-
-### Create the schema & run
-
-```bash
-pnpm db:push
-pnpm dev        # web app on http://localhost:3000
-pnpm worker     # background jobs (second terminal)
-```
-
-### Run checks
-
-```bash
-pnpm test       # vitest
-pnpm lint       # eslint
-```
-
-### Submit a pull request
-
-If you'd like to contribute, please fork the repository and open a pull request
-against the `main` branch.
+Schema changes: edit `src/server/db/schema.ts`, run `pnpm db:generate` to create
+a migration in `drizzle/`, and commit it. Migrations run automatically when the
+app starts.
 
 ---
 
 ## Known limitations
 
-- Chat replay, game chapters, deleted-VOD recovery, and downloads use Twitch's
-  **unofficial** endpoints/CDN paths — undocumented and may break if Twitch
-  changes them (the app degrades gracefully).
-- Deleted VODs are only recoverable for a short window while their segments
-  remain on Twitch's CDN; recovered VODs play in a basic HLS player without chat.
+- Chat replay, chapters, downloads and deleted-VOD recovery rely on Twitch's
+  undocumented internal APIs, which can change without notice. When they break,
+  the rest of the app keeps working.
+- Deleted VODs can only be recovered while Twitch still has the video files,
+  usually a short time after deletion.
 
 ## Legal
 
-Vault is an independent project, **not affiliated with or endorsed by Twitch**.
-It uses the official Twitch API where possible; some features (chat replay,
-recovery, downloads) rely on unofficial endpoints and may conflict with
-Twitch's Terms of Service — use them at your own discretion, for personal use.
-Downloaded VODs are the copyright of their creators/Twitch: keep them private,
-don't re-upload or redistribute.
+Vault is not affiliated with or endorsed by Twitch. It uses Twitch's official
+API where one exists. Chat replay, recovery and downloads use unofficial
+endpoints and may conflict with Twitch's Terms of Service, so use them for
+personal purposes only. Downloaded VODs belong to their creators: keep them
+private and don't redistribute them.
 
 ## License
 

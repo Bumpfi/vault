@@ -1,8 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import 'tailwindcss';
-@plugin '@tailwindcss/typography';
-
-@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -265,21 +262,10 @@ body {
   }
 }
 
-/* Thin, low-contrast scrollbars */
+/* Thin, low-contrast scrollbars in the current theme's border color. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
-}
-*::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-*::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-}
-*::-webkit-scrollbar-track {
-  background: transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 /* Small ALL-CAPS mono labels */

@@ -1,74 +1,40 @@
-import {
-  HeadContent,
-  Scripts,
-  createRootRouteWithContext,
-} from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
-
-import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
-
-import appCss from '../styles.css?url'
-
+import { HeadContent, Scripts, createRootRouteWithContext } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+import appCss from '#/styles.css?url'
+import { themeBootScript } from '#/lib/theme'
 
-interface MyRouterContext {
+export interface RouterContext {
   queryClient: QueryClient
 }
 
-export const Route = createRootRouteWithContext<MyRouterContext>()({
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
-      {
-        charSet: 'utf-8',
-      },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
-      },
-      {
-        title: 'Vault',
-      },
+      { charSet: 'utf-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { title: 'Vault' },
     ],
     links: [
       { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
-      {
-        rel: 'stylesheet',
-        href: appCss,
-      },
+      { rel: 'stylesheet', href: appCss },
     ],
   }),
   shellComponent: RootDocument,
 })
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    // `dark` is the default; the boot script adjusts it before first paint.
+    // suppressHydrationWarning: that script changes <html> attributes the
+    // server didn't render.
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
-        <script
-          // Default dark (noir). Before paint, apply the saved theme: light
-          // drops the dark class; dracula/catppuccin/rain set data-theme.
-          // Mirrors applyTheme() in lib/theme.ts.
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.theme;if(t==='light')document.documentElement.classList.remove('dark');else if(t&&t!=='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}`,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <HeadContent />
       </head>
       <body>
         {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            TanStackQueryDevtools,
-          ]}
-        />
         <Scripts />
       </body>
     </html>

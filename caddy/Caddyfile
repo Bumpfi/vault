@@ -1,6 +1,6 @@
-# LAN HTTPS with Caddy's internal (self-signed) CA — no public exposure.
-# SITE_ADDRESS is your chosen https host, e.g. https://vault.home or
-# https://192.168.1.50 (set in .env).
+# HTTPS for a LAN deployment. Caddy issues the certificate from its own local
+# certificate authority, since a private hostname can't get a public one.
+# SITE_ADDRESS is the app's public URL (BETTER_AUTH_URL), e.g. https://vault.home
 {
 	local_certs
 	auto_https disable_redirects

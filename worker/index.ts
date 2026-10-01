@@ -1,14 +1,30 @@
+// Background worker: runs the scheduled jobs. A separate process from the
+// web server so slow Twitch polling never competes with page requests.
 import { Queue, Worker } from 'bullmq'
+import type { JobsOptions } from 'bullmq'
 import IORedis from 'ioredis'
-import { pollVods } from '../src/lib/poll-vods.ts'
-import { checkAvailability } from '../src/lib/availability.ts'
+import { env } from '#/server/env'
+import { checkAvailability } from '#/server/jobs/check-availability'
+import { pollVods } from '#/server/jobs/poll-vods'
 
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379'
+// Queue and job names are stored in Redis alongside pending jobs, so they
+// are part of the persisted data: renaming one strands jobs already queued
+// under the old name.
 const QUEUE = 'vault'
+const SCHEDULES = {
+  'poll-vods': 15 * 60_000,
+  'availability-check': 6 * 60 * 60_000,
+}
 
-const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null })
+// BullMQ keeps finished jobs in Redis forever unless told otherwise; with a
+// job every 15 minutes that grows without bound.
+const jobOptions: JobsOptions = {
+  removeOnComplete: { count: 50 },
+  removeOnFail: { count: 200 },
+}
 
-const queue = new Queue(QUEUE, { connection })
+const connection = new IORedis(env.REDIS_URL, { maxRetriesPerRequest: null })
+const queue = new Queue(QUEUE, { connection, defaultJobOptions: jobOptions })
 
 const worker = new Worker(
   QUEUE,
@@ -22,44 +38,39 @@ const worker = new Worker(
         throw new Error(`Unknown job: ${job.name}`)
     }
   },
-  { connection },
+  // Started explicitly once the schedules are reconciled (see start()).
+  { connection, autorun: false },
 )
 
 worker.on('failed', (job, err) => {
-  console.error(`[worker] job ${job?.name} failed:`, err)
+  console.error(`[worker] ${job?.name} failed:`, err)
 })
 
-async function main() {
-  // ponytail: drop the legacy token-refresh schedule left in Redis by older
-  // deploys (Better Auth refreshes the user token on demand now).
-  await queue.removeJobScheduler('token-refresh').catch(() => {})
-  // Repeatable schedules.
-  await queue.upsertJobScheduler(
-    'poll-vods',
-    { every: 15 * 60 * 1000 },
-    { name: 'poll-vods' },
-  )
-  await queue.upsertJobScheduler(
-    'availability-check',
-    { every: 6 * 60 * 60 * 1000 },
-    { name: 'availability-check' },
-  )
-  // Run an immediate poll on startup.
-  await queue.add('poll-vods', {})
-  console.log(`[worker] up. Redis=${REDIS_URL}, queue=${QUEUE}`)
+async function start() {
+  // upsert is idempotent, so restarts don't create duplicate schedules.
+  for (const [name, every] of Object.entries(SCHEDULES)) {
+    await queue.upsertJobScheduler(name, { every }, { name, opts: jobOptions })
+  }
+  // Drop schedules that were removed from the code.
+  for (const scheduler of await queue.getJobSchedulers()) {
+    if (!(scheduler.key in SCHEDULES)) await queue.removeJobScheduler(scheduler.key)
+  }
+  void worker.run()
+  console.log('[worker] started')
 }
 
-main().catch((err) => {
-  console.error('[worker] fatal:', err)
-  process.exit(1)
-})
-
 async function shutdown() {
-  console.log('[worker] shutting down…')
-  await worker.close()
+  console.log('[worker] shutting down')
+  await worker.close() // lets the running job finish
   await queue.close()
   await connection.quit()
   process.exit(0)
 }
-process.on('SIGINT', shutdown)
-process.on('SIGTERM', shutdown)
+
+process.on('SIGINT', () => void shutdown())
+process.on('SIGTERM', () => void shutdown())
+
+start().catch((err: unknown) => {
+  console.error('[worker] failed to start:', err)
+  process.exit(1)
+})
