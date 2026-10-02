@@ -135,41 +135,44 @@ export function TwitchPlayer({
     }
 
     setBlocked(false)
-    const stopLoading = loadEmbedScript(() => {
-      const Twitch = window.Twitch
-      if (!Twitch || !containerRef.current) return
-      const player = new Twitch.Player(containerRef.current, {
-        video: videoId,
-        // Twitch only allows the embed on the domains listed here.
-        parent: [window.location.hostname],
-        width: '100%',
-        height: '100%',
-        autoplay: true,
-        // Always pass a start time. Without one the embed resumes from its
-        // own memory, which is per browser rather than per Vault user — on a
-        // shared computer you'd continue someone else's spot. Twitch treats
-        // 0 as "not set", hence at least one second.
-        time: embedTime(Math.max(1, latest.current.initialPosition)),
-      })
-      playerRef.current = player
+    const stopLoading = loadEmbedScript(
+      () => {
+        const Twitch = window.Twitch
+        if (!Twitch || !containerRef.current) return
+        const player = new Twitch.Player(containerRef.current, {
+          video: videoId,
+          // Twitch only allows the embed on the domains listed here.
+          parent: [window.location.hostname],
+          width: '100%',
+          height: '100%',
+          autoplay: true,
+          // Always pass a start time. Without one the embed resumes from its
+          // own memory, which is per browser rather than per Vault user — on a
+          // shared computer you'd continue someone else's spot. Twitch treats
+          // 0 as "not set", hence at least one second.
+          time: embedTime(Math.max(1, latest.current.initialPosition)),
+        })
+        playerRef.current = player
 
-      // Update the clock immediately on seek/play/pause, not on the next tick.
-      const sync = () => setSeconds(player.getCurrentTime())
-      player.addEventListener(Twitch.Player.SEEK, sync)
-      player.addEventListener(Twitch.Player.PLAYING, sync)
-      player.addEventListener(Twitch.Player.PAUSE, sync)
+        // Update the clock immediately on seek/play/pause, not on the next tick.
+        const sync = () => setSeconds(player.getCurrentTime())
+        player.addEventListener(Twitch.Player.SEEK, sync)
+        player.addEventListener(Twitch.Player.PLAYING, sync)
+        player.addEventListener(Twitch.Player.PAUSE, sync)
 
-      interval = setInterval(() => {
-        const t = player.getCurrentTime()
-        if (t <= 0) return
-        setSeconds(t)
-        latest.current.onTime?.(t)
-        if (Math.abs(t - lastSaved) >= SAVE_EVERY_S) {
-          lastSaved = t
-          persist()
-        }
-      }, TICK_MS)
-    }, () => setBlocked(true))
+        interval = setInterval(() => {
+          const t = player.getCurrentTime()
+          if (t <= 0) return
+          setSeconds(t)
+          latest.current.onTime?.(t)
+          if (Math.abs(t - lastSaved) >= SAVE_EVERY_S) {
+            lastSaved = t
+            persist()
+          }
+        }, TICK_MS)
+      },
+      () => setBlocked(true),
+    )
 
     const container = containerRef.current
     return () => {
@@ -190,9 +193,9 @@ export function TwitchPlayer({
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center text-sm text-white">
           <p className="font-medium">The Twitch player couldn’t load.</p>
           <p className="max-w-md text-xs text-white/70">
-            Your browser blocked player.twitch.tv — usually Firefox’s Enhanced
-            Tracking Protection (set to Strict) or a content blocker. Allow it for
-            this site and reload the page.
+            Your browser blocked player.twitch.tv — usually Firefox’s Enhanced Tracking
+            Protection (set to Strict) or a content blocker. Allow it for this site and
+            reload the page.
           </p>
         </div>
       ) : null}
