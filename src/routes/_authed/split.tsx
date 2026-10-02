@@ -173,7 +173,7 @@ function Picker({ excludeId }: { excludeId: string }) {
                 )}
               </div>
               <div className="line-clamp-1 text-xs font-medium">{v.title}</div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground" suppressHydrationWarning>
                 {v.streamerName} · {timeAgo(v.publishedAt)}
               </div>
             </Link>

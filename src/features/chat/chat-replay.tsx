@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useHydrated } from '@tanstack/react-router'
 import { ChatBuffer } from './chat-buffer'
 import { getChatBadges, getChatPage } from './functions'
 import type { ChatComment } from '#/server/twitch/gql'
@@ -123,7 +124,9 @@ export function ChatReplay({
     setFollowing(true)
   }
 
-  const synced = realClock(streamStartedAt, currentTime)
+  // Wall-clock times use the viewer's time zone, unknown on the server.
+  const hydrated = useHydrated()
+  const synced = hydrated ? realClock(streamStartedAt, currentTime) : null
 
   return (
     <div className="flex h-full flex-col">

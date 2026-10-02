@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { Ref } from 'react'
+import { useHydrated } from '@tanstack/react-router'
 import { RefreshCw } from 'lucide-react'
 import { saveProgress } from './functions'
 import { realClock } from '#/lib/format'
@@ -42,7 +43,7 @@ function embedTime(seconds: number) {
 const TICK_MS = 1000
 const SAVE_EVERY_S = 5
 
-function loadEmbedScript(onReady: () => void): () => void {
+function loadEmbedScript(onReady: () => void, onError: () => void): () => void {
   if (window.Twitch?.Player) {
     onReady()
     return () => {}
@@ -54,9 +55,17 @@ function loadEmbedScript(onReady: () => void): () => void {
     script.async = true
     document.body.appendChild(script)
   }
-  script.addEventListener('load', onReady)
   const s = script
-  return () => s.removeEventListener('load', onReady)
+  const fail = () => {
+    s.remove() // so the next attempt adds a fresh tag instead of waiting forever
+    onError()
+  }
+  s.addEventListener('load', onReady)
+  s.addEventListener('error', fail)
+  return () => {
+    s.removeEventListener('load', onReady)
+    s.removeEventListener('error', fail)
+  }
 }
 
 export function TwitchPlayer({
@@ -84,6 +93,10 @@ export function TwitchPlayer({
   const playerRef = useRef<TwitchEmbedPlayer | null>(null)
   const [seconds, setSeconds] = useState(initialPosition)
   const [syncing, setSyncing] = useState(false)
+  const [blocked, setBlocked] = useState(false)
+  // The clock is shown in the viewer's time zone, which the server doesn't
+  // know, so it's only rendered in the browser.
+  const hydrated = useHydrated()
 
   // The embed must be created once per video. If these props fed the effect's
   // dependencies, a background data refresh that changed one of them would
@@ -121,6 +134,7 @@ export function TwitchPlayer({
       })
     }
 
+    setBlocked(false)
     const stopLoading = loadEmbedScript(() => {
       const Twitch = window.Twitch
       if (!Twitch || !containerRef.current) return
@@ -155,7 +169,7 @@ export function TwitchPlayer({
           persist()
         }
       }, TICK_MS)
-    })
+    }, () => setBlocked(true))
 
     const container = containerRef.current
     return () => {
@@ -167,11 +181,21 @@ export function TwitchPlayer({
     }
   }, [videoId])
 
-  const clock = realClock(streamStartedAt, seconds)
+  const clock = hydrated ? realClock(streamStartedAt, seconds) : null
 
   return (
     <div className="group relative size-full bg-black">
       <div ref={containerRef} className="size-full" />
+      {blocked ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center text-sm text-white">
+          <p className="font-medium">The Twitch player couldn’t load.</p>
+          <p className="max-w-md text-xs text-white/70">
+            Your browser blocked player.twitch.tv — usually Firefox’s Enhanced
+            Tracking Protection (set to Strict) or a content blocker. Allow it for
+            this site and reload the page.
+          </p>
+        </div>
+      ) : null}
       {/* Shown on hover. pointer-events-none so it never blocks the embed. */}
       <div className="pointer-events-none absolute top-2 right-2 z-10 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
         {clock ? (

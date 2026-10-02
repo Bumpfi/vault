@@ -128,7 +128,7 @@ export function VodCard({ vod, live = false }: { vod: FeedVod; live?: boolean })
               ) : null}
               <span className="truncate">{vod.streamerName}</span>
             </div>
-            <div className="font-mono text-[11px] text-faint">
+            <div className="font-mono text-[11px] text-faint" suppressHydrationWarning>
               {timeAgo(vod.publishedAt)}
             </div>
           </div>
