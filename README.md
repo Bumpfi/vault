@@ -111,7 +111,6 @@ worker/                background job runner (separate process)
 drizzle/               SQL migrations
 ```
 
-
 ---
 
 ## Contributing

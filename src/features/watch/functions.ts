@@ -5,6 +5,7 @@ import { authMiddleware } from '#/features/auth/middleware'
 import { db } from '#/server/db'
 import { streamer, vod, watchProgress } from '#/server/db/schema'
 import { findPlaylistUrl } from '#/server/twitch/cdn'
+import { fetchCategories } from '#/server/twitch/gql'
 
 /** Share of a VOD that counts as finished. */
 const COMPLETED_AT = 0.9
@@ -126,3 +127,15 @@ export const recoverVod = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .validator(vodId)
   .handler(async ({ data: id }) => ({ url: await findPlaylistUrl(id) }))
+
+/** The categories (games) a VOD was streamed in, with their start times. */
+export const getCategories = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(z.string().regex(/^\d+$/))
+  .handler(async ({ data: twitchVideoId }) => {
+    try {
+      return await fetchCategories(twitchVideoId)
+    } catch {
+      return [] // optional extra; never break the page over it
+    }
+  })

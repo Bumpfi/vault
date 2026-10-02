@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { authMiddleware } from '#/features/auth/middleware'
-import { fetchChapters, fetchChatPage } from '#/server/twitch/gql'
+import { fetchChatPage } from '#/server/twitch/gql'
 import { getChannelBadges, getGlobalBadges } from '#/server/twitch/helix'
 import type { BadgeMap } from '#/server/twitch/helix'
 
@@ -20,17 +20,6 @@ export const getChatPage = createServerFn({ method: 'GET' })
     }),
   )
   .handler(({ data }) => fetchChatPage(data.videoId, data.from))
-
-export const getChapters = createServerFn({ method: 'GET' })
-  .middleware([authMiddleware])
-  .validator(twitchId)
-  .handler(async ({ data: videoId }) => {
-    try {
-      return await fetchChapters(videoId)
-    } catch {
-      return [] // chapters are optional decoration
-    }
-  })
 
 /** Global and channel badges merged; the channel's version wins on conflict. */
 export const getChatBadges = createServerFn({ method: 'GET' })

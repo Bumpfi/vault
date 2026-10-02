@@ -1,10 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRef, useState } from 'react'
 import { Check, CheckCheck, Film } from 'lucide-react'
 import type { FeedVod } from './functions'
-import { markOlderWatched, setWatched } from '#/features/watch/functions'
+import { getCategories, markOlderWatched, setWatched } from '#/features/watch/functions'
 import { formatDuration, hueFromString, thumbnail, timeAgo } from '#/lib/format'
 import { cn } from '#/lib/utils'
+
+const MAX_CATEGORIES = 3
 
 export function VodCard({ vod, live = false }: { vod: FeedVod; live?: boolean }) {
   const qc = useQueryClient()
@@ -28,10 +31,32 @@ export function VodCard({ vod, live = false }: { vod: FeedVod; live?: boolean })
     onSuccess: refresh,
   })
 
+  // Categories are fetched when the card is hovered, after a short pause so
+  // moving the mouse across the grid doesn't request every card. Shared
+  // cache key with the watch page, so each VOD is fetched once.
+  const [wantCategories, setWantCategories] = useState(false)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const categories = useQuery({
+    queryKey: ['categories', vod.twitchVideoId],
+    queryFn: () => getCategories({ data: vod.twitchVideoId }),
+    enabled: wantCategories,
+    staleTime: 30 * 60 * 1000,
+  })
+  const uniqueCategories = [
+    ...new Map((categories.data ?? []).map((c) => [c.name, c])).values(),
+  ]
+  const hiddenCount = uniqueCategories.length - MAX_CATEGORIES
+
   const hue = hueFromString(vod.streamerName)
 
   return (
-    <div className="group relative flex flex-col gap-2">
+    <div
+      className="group relative flex flex-col gap-2"
+      onMouseEnter={() => {
+        hoverTimer.current = setTimeout(() => setWantCategories(true), 150)
+      }}
+      onMouseLeave={() => clearTimeout(hoverTimer.current)}
+    >
       <Link
         to="/watch/$videoId"
         params={{ videoId: vod.twitchVideoId }}
@@ -74,6 +99,27 @@ export function VodCard({ vod, live = false }: { vod: FeedVod; live?: boolean })
               )}
             </div>
           )}
+
+          {uniqueCategories.length > 0 ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end gap-1 bg-linear-to-t from-black/85 via-black/50 to-transparent px-1.5 pt-8 pr-14 pb-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+              {uniqueCategories.slice(0, MAX_CATEGORIES).map((c) => (
+                <span
+                  key={c.name}
+                  className="flex items-center gap-1 rounded bg-black/60 py-0.5 pr-1.5 pl-0.5 text-[11px] font-medium text-white"
+                >
+                  {c.boxArtUrl ? (
+                    <img src={c.boxArtUrl} alt="" className="h-4 w-3 rounded-[2px]" />
+                  ) : null}
+                  <span className="max-w-36 truncate">{c.name}</span>
+                </span>
+              ))}
+              {hiddenCount > 0 ? (
+                <span className="rounded bg-black/60 px-1.5 py-0.5 text-[11px] font-medium text-white">
+                  +{hiddenCount}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
 
           {vod.durationSeconds ? (
             <span className="absolute right-1 bottom-1 rounded bg-black/75 px-1.5 py-0.5 font-mono text-xs font-medium text-white">

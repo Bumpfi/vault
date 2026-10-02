@@ -1,16 +1,15 @@
 // Twitch's internal GraphQL API — the one twitch.tv itself uses. It is
 // undocumented and unsupported: it is the only source for VOD chat replay,
-// game chapters and playback tokens (used for downloads), but it can change
+// categories and playback tokens (used for downloads), but it can change
 // without notice. Everything that depends on it lives in this file.
 //
-// Requests use Twitch's public web client id and "persisted queries": the
-// query text is stored on Twitch's side and referenced by its SHA-256 hash.
+// Requests use Twitch's public web client id. Some use "persisted queries",
+// where the query text is stored on Twitch's side and referenced by its
+// SHA-256 hash; others send the query text directly.
 const GQL_URL = 'https://gql.twitch.tv/gql'
 const WEB_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'
 const COMMENTS_QUERY_HASH =
   'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a'
-const CHAPTERS_QUERY_HASH =
-  '8d2793384aac3773beab5e59bd5d6f585aedb923d292800119e03d40cd0f9b41'
 
 async function gql<T>(operation: {
   operationName: string
@@ -128,38 +127,70 @@ export async function fetchChatPage(
   }
 }
 
-// ── Game chapters ────────────────────────────────────────────────────────
+// ── Categories ───────────────────────────────────────────────────────────
 
-export interface VodChapter {
+/** A category (game) of a VOD, and where in the VOD it starts. */
+export interface VodCategory {
+  name: string
+  boxArtUrl: string | null
   positionSeconds: number
-  game: string
 }
 
-interface ChaptersResponse {
+const CATEGORIES_QUERY = `query VodCategories($id: ID!) {
+  video(id: $id) {
+    game { displayName boxArtURL(width: 40, height: 53) }
+    moments(momentRequestType: VIDEO_CHAPTER_MARKERS, types: [GAME_CHANGE]) {
+      edges { node {
+        positionMilliseconds
+        details { ... on GameChangeMomentDetails { game { displayName boxArtURL(width: 40, height: 53) } } }
+      } }
+    }
+  }
+}`
+
+interface Game {
+  displayName: string
+  boxArtURL: string | null
+}
+
+interface CategoriesResponse {
   video?: {
+    game?: Game | null
     moments?: {
       edges: Array<{
-        node: {
-          positionMilliseconds?: number
-          description?: string
-          details?: { game?: { displayName?: string } | null } | null
-        }
+        node: { positionMilliseconds?: number; details?: { game?: Game | null } | null }
       }>
-    }
+    } | null
   } | null
 }
 
-/** The per-VOD game timeline twitch.tv shows under the player. */
-export async function fetchChapters(videoId: string): Promise<Array<VodChapter>> {
-  const data = await persistedQuery<ChaptersResponse>(
-    'VideoPlayer_ChapterSelectButtonVideo',
-    CHAPTERS_QUERY_HASH,
-    { includePrivate: false, videoID: videoId },
-  )
-  return (data?.video?.moments?.edges ?? []).map(({ node }) => ({
-    positionSeconds: Math.round((node.positionMilliseconds ?? 0) / 1000),
-    game: node.details?.game?.displayName ?? node.description ?? 'Unknown',
-  }))
+/**
+ * The categories a VOD was streamed in, in order. Twitch only records
+ * chapters when the category changes, so a stream that stayed in one
+ * category has none — then the VOD's own category is the only entry.
+ */
+export async function fetchCategories(videoId: string): Promise<Array<VodCategory>> {
+  const data = await gql<CategoriesResponse>({
+    operationName: 'VodCategories',
+    query: CATEGORIES_QUERY,
+    variables: { id: videoId },
+  })
+  const chapters = (data?.video?.moments?.edges ?? []).flatMap(({ node }) => {
+    const game = node.details?.game
+    if (!game) return []
+    return [
+      {
+        name: game.displayName,
+        boxArtUrl: game.boxArtURL,
+        positionSeconds: Math.round((node.positionMilliseconds ?? 0) / 1000),
+      },
+    ]
+  })
+  if (chapters.length > 0) return chapters
+  const game = data?.video?.game
+  return game
+    ? [{ name: game.displayName, boxArtUrl: game.boxArtURL, positionSeconds: 0 }]
+    : []
 }
 
 // ── Playback access ──────────────────────────────────────────────────────

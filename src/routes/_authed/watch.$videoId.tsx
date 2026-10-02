@@ -1,14 +1,20 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Suspense, lazy, useRef, useState } from 'react'
-import { Download } from 'lucide-react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Download, PictureInPicture2 } from 'lucide-react'
 import { AppHeader } from '#/components/app-header'
 import { Button } from '#/components/ui/button'
 import { ChatReplay } from '#/features/chat/chat-replay'
-import { getChapters } from '#/features/chat/functions'
 import { TwitchPlayer } from '#/features/watch/twitch-player'
 import type { TwitchPlayerHandle } from '#/features/watch/twitch-player'
-import { getWatchData, recoverVod, setWatched } from '#/features/watch/functions'
+import {
+  getCategories,
+  getWatchData,
+  recoverVod,
+  setWatched,
+} from '#/features/watch/functions'
+import { openPopOutWindow, popOutSupported } from '#/features/watch/pop-out'
 import { formatTimestamp } from '#/lib/format'
 
 // hls.js is large and only needed to play recovered (deleted) VODs, so it's
@@ -47,11 +53,43 @@ function WatchPage({ vod }: { vod: WatchData }) {
   const [watched, setWatchedState] = useState(!!vod.watched)
   const [showChat, setShowChat] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
+  // Points at whichever player is mounted: the page's or the pop-out's.
   const playerRef = useRef<TwitchPlayerHandle>(null)
+  // Where the page's player starts when it (re)mounts.
+  const [resumeAt, setResumeAt] = useState(vod.position ?? 0)
+  const [popOut, setPopOut] = useState<{ win: Window; startAt: number } | null>(null)
+  const [showPopOutHint, setShowPopOutHint] = useState(false)
 
-  const chapters = useQuery({
-    queryKey: ['chapters', vod.twitchVideoId],
-    queryFn: () => getChapters({ data: vod.twitchVideoId }),
+  // Moves playback into a floating window. Only one player exists at a time,
+  // so progress and chat simply follow whichever one is playing.
+  const openPopOut = async () => {
+    if (!popOutSupported()) {
+      setShowPopOutHint((v) => !v)
+      return
+    }
+    const startAt = playerRef.current?.getCurrentTime() || resumeAt
+    let win: Window
+    try {
+      win = await openPopOutWindow()
+    } catch {
+      setShowPopOutHint(true) // the browser refused; explain the built-in way
+      return
+    }
+    win.addEventListener('pagehide', () => {
+      setResumeAt(playerRef.current?.getCurrentTime() || startAt)
+      setPopOut(null)
+    })
+    setPopOut({ win, startAt })
+  }
+  // Leaving the page closes the floating window rather than leaving it empty.
+  useEffect(() => {
+    if (!popOut) return
+    return () => popOut.win.close()
+  }, [popOut])
+
+  const categories = useQuery({
+    queryKey: ['categories', vod.twitchVideoId],
+    queryFn: () => getCategories({ data: vod.twitchVideoId }),
   })
   const recover = useMutation({ mutationFn: () => recoverVod({ data: vod.id }) })
   const toggleWatched = useMutation({
@@ -69,12 +107,19 @@ function WatchPage({ vod }: { vod: WatchData }) {
             toggled. 2.5rem = horizontal page padding + gap. */}
         <div className="flex flex-col gap-2 [--chat-w:360px] lg:flex-row lg:justify-center">
           <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black lg:h-[min(calc(100vh_-_7rem),calc((100vw_-_var(--chat-w)_-_2.5rem)*9/16))] lg:w-auto lg:flex-none">
-            {vod.isAvailable ? (
+            {vod.isAvailable && popOut ? (
+              <div className="flex size-full flex-col items-center justify-center gap-3 text-sm text-white">
+                <p>Playing in the pop-out window.</p>
+                <Button size="sm" variant="secondary" onClick={() => popOut.win.close()}>
+                  Bring it back
+                </Button>
+              </div>
+            ) : vod.isAvailable ? (
               <TwitchPlayer
                 ref={playerRef}
                 videoId={vod.twitchVideoId}
                 vodId={vod.id}
-                initialPosition={vod.position ?? 0}
+                initialPosition={resumeAt}
                 duration={vod.durationSeconds ?? 0}
                 streamStartedAt={vod.createdAtTwitch}
                 onTime={setCurrentTime}
@@ -128,6 +173,16 @@ function WatchPage({ vod }: { vod: WatchData }) {
             >
               Chat
             </Button>
+            {vod.isAvailable ? (
+              <Button
+                variant={popOut ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => (popOut ? popOut.win.close() : void openPopOut())}
+              >
+                <PictureInPicture2 className="size-4" />
+                Pop out
+              </Button>
+            ) : null}
             <Button variant="outline" size="sm" asChild>
               <Link to="/split" search={{ a: vod.twitchVideoId }}>
                 Split view
@@ -150,21 +205,54 @@ function WatchPage({ vod }: { vod: WatchData }) {
           </div>
         </div>
 
-        {chapters.data?.length ? (
+        {showPopOutHint ? (
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            This browser can’t open a pop-out window from a page, but it can float the
+            video itself. In Firefox, hover over the video and click the
+            picture-in-picture button on its right edge, or press Ctrl+Shift+] (⌘⌥⇧] on a
+            Mac).
+          </p>
+        ) : null}
+
+        {popOut
+          ? createPortal(
+              <div className="h-screen w-screen">
+                <TwitchPlayer
+                  ref={playerRef}
+                  videoId={vod.twitchVideoId}
+                  vodId={vod.id}
+                  initialPosition={popOut.startAt}
+                  duration={vod.durationSeconds ?? 0}
+                  streamStartedAt={vod.createdAtTwitch}
+                  onTime={setCurrentTime}
+                />
+              </div>,
+              popOut.win.document.body,
+            )
+          : null}
+
+        {categories.data?.length ? (
           <div className="mt-5">
-            <div className="label-caps mb-2">Chapters</div>
+            <div className="label-caps mb-2">Categories</div>
             <div className="flex flex-wrap gap-2">
-              {chapters.data.map((ch) => (
+              {categories.data.map((c) => (
                 <button
-                  key={ch.positionSeconds}
+                  key={c.positionSeconds}
                   type="button"
-                  onClick={() => playerRef.current?.seek(ch.positionSeconds)}
-                  className="flex items-center gap-2 rounded-full border bg-secondary px-3 py-1 text-xs transition-colors hover:bg-accent"
+                  // Only a stream that changed category has positions to jump to.
+                  disabled={categories.data.length === 1}
+                  onClick={() => playerRef.current?.seek(c.positionSeconds)}
+                  className="flex items-center gap-2 rounded-full border bg-secondary py-1 pr-3 pl-1 text-xs transition-colors enabled:hover:bg-accent"
                 >
-                  <span className="font-mono text-faint">
-                    {formatTimestamp(ch.positionSeconds)}
-                  </span>
-                  <span className="font-medium">{ch.game}</span>
+                  {c.boxArtUrl ? (
+                    <img src={c.boxArtUrl} alt="" className="h-5 w-[15px] rounded-sm" />
+                  ) : null}
+                  {categories.data.length > 1 ? (
+                    <span className="font-mono text-faint">
+                      {formatTimestamp(c.positionSeconds)}
+                    </span>
+                  ) : null}
+                  <span className="font-medium">{c.name}</span>
                 </button>
               ))}
             </div>
