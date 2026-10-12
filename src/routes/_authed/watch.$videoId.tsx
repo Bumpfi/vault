@@ -15,6 +15,7 @@ import {
   setWatched,
 } from '#/features/watch/functions'
 import { openPopOutWindow, popOutSupported } from '#/features/watch/pop-out'
+import type { VodCategory } from '#/server/twitch/gql'
 import { formatTimestamp } from '#/lib/format'
 
 // hls.js is large and only needed to play recovered (deleted) VODs, so it's
@@ -48,6 +49,61 @@ function Watch() {
 }
 
 type WatchData = NonNullable<ReturnType<typeof Route.useLoaderData>>
+
+/** Where each chapter sits on the bar, in percent of the VOD's length. */
+function chapterSegments(categories: Array<VodCategory>, duration: number) {
+  const sorted = [...categories]
+    .sort((a, b) => a.positionSeconds - b.positionSeconds)
+    // A chapter past the end (trimmed VOD) has nothing to show.
+    .filter((c) => c.positionSeconds < duration)
+  return sorted.map((c, i) => {
+    const endSeconds = sorted[i + 1]?.positionSeconds ?? duration
+    return {
+      name: c.name,
+      startSeconds: c.positionSeconds,
+      endSeconds,
+      // ponytail: tiny chapters stay tiny; add a min width if they're hard to click.
+      widthPercent: ((endSeconds - c.positionSeconds) / duration) * 100,
+    }
+  })
+}
+
+/** Category chapters as a strip under the player; the embed's own seek bar is off-limits (iframe). */
+function ChapterBar({
+  categories,
+  duration,
+  currentTime,
+  onSeek,
+}: {
+  categories: Array<VodCategory>
+  duration: number
+  currentTime: number
+  onSeek: (seconds: number) => void
+}) {
+  return (
+    <div className="relative flex h-2 w-full gap-px overflow-hidden rounded-full">
+      {chapterSegments(categories, duration).map((c) => {
+        const active = currentTime >= c.startSeconds && currentTime < c.endSeconds
+        return (
+          <button
+            key={c.startSeconds}
+            type="button"
+            // ponytail: native tooltip; custom hover card if box art is wanted here.
+            title={`${formatTimestamp(c.startSeconds)} · ${c.name}`}
+            aria-label={`Jump to ${c.name} at ${formatTimestamp(c.startSeconds)}`}
+            onClick={() => onSeek(c.startSeconds)}
+            style={{ width: `${c.widthPercent}%` }}
+            className={`h-full transition-colors hover:bg-primary/80 ${active ? 'bg-primary' : 'bg-muted-foreground/40'}`}
+          />
+        )
+      })}
+      <div
+        className="pointer-events-none absolute inset-y-0 w-0.5 bg-foreground"
+        style={{ left: `${Math.min(100, (currentTime / duration) * 100)}%` }}
+      />
+    </div>
+  )
+}
 
 function WatchPage({ vod }: { vod: WatchData }) {
   const [watched, setWatchedState] = useState(!!vod.watched)
@@ -106,46 +162,63 @@ function WatchPage({ vod }: { vod: WatchData }) {
             for chat, so it never overflows and doesn't resize when chat is
             toggled. 2.5rem = horizontal page padding + gap. */}
         <div className="flex flex-col gap-2 [--chat-w:360px] lg:flex-row lg:justify-center">
-          <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black lg:h-[min(calc(100vh_-_7rem),calc((100vw_-_var(--chat-w)_-_2.5rem)*9/16))] lg:w-auto lg:flex-none">
-            {vod.isAvailable && popOut ? (
-              <div className="flex size-full flex-col items-center justify-center gap-3 text-sm text-white">
-                <p>Playing in the pop-out window.</p>
-                <Button size="sm" variant="secondary" onClick={() => popOut.win.close()}>
-                  Bring it back
-                </Button>
-              </div>
-            ) : vod.isAvailable ? (
-              <TwitchPlayer
-                ref={playerRef}
-                videoId={vod.twitchVideoId}
-                vodId={vod.id}
-                initialPosition={resumeAt}
-                duration={vod.durationSeconds ?? 0}
-                streamStartedAt={vod.createdAtTwitch}
-                onTime={setCurrentTime}
+          {/* Wrapper so the chapter bar takes exactly the player's width. */}
+          <div className="flex flex-col gap-1.5 lg:flex-none">
+            <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black lg:h-[min(calc(100vh_-_7rem),calc((100vw_-_var(--chat-w)_-_2.5rem)*9/16))] lg:w-auto lg:flex-none">
+              {vod.isAvailable && popOut ? (
+                <div className="flex size-full flex-col items-center justify-center gap-3 text-sm text-white">
+                  <p>Playing in the pop-out window.</p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => popOut.win.close()}
+                  >
+                    Bring it back
+                  </Button>
+                </div>
+              ) : vod.isAvailable ? (
+                <TwitchPlayer
+                  ref={playerRef}
+                  videoId={vod.twitchVideoId}
+                  vodId={vod.id}
+                  initialPosition={resumeAt}
+                  duration={vod.durationSeconds ?? 0}
+                  streamStartedAt={vod.createdAtTwitch}
+                  onTime={setCurrentTime}
+                />
+              ) : recover.data?.url ? (
+                <Suspense>
+                  <HlsPlayer src={recover.data.url} />
+                </Suspense>
+              ) : (
+                <div className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center">
+                  <p className="text-sm font-medium">This VOD was deleted from Twitch.</p>
+                  <Button
+                    size="sm"
+                    onClick={() => recover.mutate()}
+                    disabled={recover.isPending}
+                  >
+                    {recover.isPending ? 'Searching Twitch’s CDN…' : 'Try to recover'}
+                  </Button>
+                  {recover.isSuccess && !recover.data.url ? (
+                    <p className="max-w-sm text-xs text-faint">
+                      Couldn’t recover it — Twitch has already removed the video files.
+                      Recovery only works shortly after a VOD is deleted.
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </div>
+            {vod.isAvailable &&
+            (categories.data?.length ?? 0) > 1 &&
+            vod.durationSeconds ? (
+              <ChapterBar
+                categories={categories.data ?? []}
+                duration={vod.durationSeconds}
+                currentTime={currentTime}
+                onSeek={(s) => playerRef.current?.seek(s)}
               />
-            ) : recover.data?.url ? (
-              <Suspense>
-                <HlsPlayer src={recover.data.url} />
-              </Suspense>
-            ) : (
-              <div className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center">
-                <p className="text-sm font-medium">This VOD was deleted from Twitch.</p>
-                <Button
-                  size="sm"
-                  onClick={() => recover.mutate()}
-                  disabled={recover.isPending}
-                >
-                  {recover.isPending ? 'Searching Twitch’s CDN…' : 'Try to recover'}
-                </Button>
-                {recover.isSuccess && !recover.data.url ? (
-                  <p className="max-w-sm text-xs text-faint">
-                    Couldn’t recover it — Twitch has already removed the video files.
-                    Recovery only works shortly after a VOD is deleted.
-                  </p>
-                ) : null}
-              </div>
-            )}
+            ) : null}
           </div>
 
           {vod.isAvailable && showChat ? (

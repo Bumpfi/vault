@@ -1,0 +1,1 @@
+ALTER TABLE "vod" ADD COLUMN "playlist_url" text;

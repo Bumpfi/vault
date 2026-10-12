@@ -149,6 +149,9 @@ export const vod = pgTable(
     durationSeconds: integer('duration_seconds'),
     // False once Twitch no longer lists the VOD (deleted or expired).
     isAvailable: boolean('is_available').notNull().default(true),
+    // CDN playlist captured while the VOD still existed. Lets a deleted VOD be
+    // recovered without guessing its CDN path.
+    playlistUrl: text('playlist_url'),
   },
   (t) => [
     index('vod_streamer_id_idx').on(t.streamerId),

@@ -40,7 +40,7 @@ const CDN_HOSTS = [
 const START_TIME_WINDOW_S = 20
 
 /** Playlist of the highest-quality variant, via Twitch's playlist service. */
-async function playlistFromUsher(twitchVideoId: string): Promise<string | null> {
+export async function playlistFromUsher(twitchVideoId: string): Promise<string | null> {
   const token = await fetchPlaybackToken(twitchVideoId)
   if (!token) return null
   const url = new URL(`https://usher.ttvnw.net/vod/${twitchVideoId}.m3u8`)
@@ -91,6 +91,7 @@ export async function findPlaylistUrl(vodId: number): Promise<string | null> {
       streamId: vod.streamId,
       startedAt: vod.createdAtTwitch,
       login: streamer.login,
+      savedUrl: vod.playlistUrl,
     })
     .from(vod)
     .innerJoin(streamer, eq(streamer.id, vod.streamerId))
@@ -101,6 +102,10 @@ export async function findPlaylistUrl(vodId: number): Promise<string | null> {
   if (row.isAvailable) {
     const url = await playlistFromUsher(row.twitchVideoId).catch(() => null)
     if (url) return url
+  }
+  if (row.savedUrl) {
+    const res = await fetch(row.savedUrl, { method: 'HEAD' }).catch(() => null)
+    if (res?.ok) return row.savedUrl
   }
   if (!row.streamId || !row.startedAt) return null
   return playlistFromCdn(

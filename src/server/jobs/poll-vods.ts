@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { db } from '#/server/db'
 import { streamer, subscription, vod } from '#/server/db/schema'
+import { playlistFromUsher } from '#/server/twitch/cdn'
 import { getArchiveVideos } from '#/server/twitch/helix'
 import { parseDuration } from '#/lib/format'
 
@@ -33,7 +34,7 @@ export async function pollVods(options: { userId?: string } = {}) {
     try {
       const videos = await getArchiveVideos(s.twitchUserId)
       if (videos.length === 0) continue
-      await db
+      const rows = await db
         .insert(vod)
         .values(
           videos.map((v) => ({
@@ -57,9 +58,24 @@ export async function pollVods(options: { userId?: string } = {}) {
             thumbnailUrl: sql`excluded.thumbnail_url`,
             durationSeconds: sql`excluded.duration_seconds`,
             publishedAt: sql`excluded.published_at`,
+            // Listed in the channel's archive, so it exists. Heals a VOD the
+            // availability check wrongly flagged.
+            isAvailable: true,
           },
         })
+        .returning({
+          id: vod.id,
+          twitchVideoId: vod.twitchVideoId,
+          playlistUrl: vod.playlistUrl,
+        })
       upserted += videos.length
+
+      // Save each VOD's playlist once, while Twitch still hands it out, so
+      // it can be recovered after deletion (see findPlaylistUrl).
+      for (const row of rows.filter((r) => !r.playlistUrl)) {
+        const url = await playlistFromUsher(row.twitchVideoId).catch(() => null)
+        if (url) await db.update(vod).set({ playlistUrl: url }).where(eq(vod.id, row.id))
+      }
     } catch (err) {
       // One failing channel shouldn't stop the rest.
       console.error(`[poll-vods] ${s.login} failed:`, err)
