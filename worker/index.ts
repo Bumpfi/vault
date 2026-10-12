@@ -55,6 +55,8 @@ async function start() {
   for (const scheduler of await queue.getJobSchedulers()) {
     if (!(scheduler.key in SCHEDULES)) await queue.removeJobScheduler(scheduler.key)
   }
+  // Poll once now so a deploy takes effect without waiting for the schedule.
+  await queue.add('poll-vods', {}, jobOptions)
   void worker.run()
   console.log('[worker] started')
 }

@@ -6,6 +6,7 @@ import { db } from '#/server/db'
 import { streamer, vod, watchProgress } from '#/server/db/schema'
 import { findPlaylistUrl } from '#/server/twitch/cdn'
 import { fetchCategories } from '#/server/twitch/gql'
+import { getExistingVideoIds } from '#/server/twitch/helix'
 
 /** Share of a VOD that counts as finished. */
 const COMPLETED_AT = 0.9
@@ -37,7 +38,20 @@ export const getWatchData = createServerFn({ method: 'GET' })
       )
       .where(eq(vod.twitchVideoId, twitchVideoId))
       .limit(1)
-    return row ?? null
+    if (!row) return null
+
+    // The background check can wrongly flag a VOD, so double-check with
+    // Twitch before showing the "deleted" screen.
+    if (!row.isAvailable) {
+      const exists = await getExistingVideoIds([twitchVideoId])
+        .then((ids) => ids.has(twitchVideoId))
+        .catch(() => false)
+      if (exists) {
+        await db.update(vod).set({ isAvailable: true }).where(eq(vod.id, row.id))
+        row.isAvailable = true
+      }
+    }
+    return row
   })
 
 /** Saves the resume position; marks the VOD watched once past 90%. */
